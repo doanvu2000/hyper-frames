@@ -11,6 +11,11 @@ Pick a template, edit its fields, scrub the live preview, then render MP4, WebM,
 
 ## Run
 
+On Windows, double-click **`HyperFrames Studio.cmd`**. The first run installs dependencies; later runs start
+in a few seconds and open the browser. Close the console window to stop the studio.
+
+From a terminal:
+
 ```bash
 npm install
 npm run dev        # API on http://127.0.0.1:8787, UI on http://localhost:5173
