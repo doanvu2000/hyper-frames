@@ -45,7 +45,7 @@ async function onLoad(i) {
   try {
     info = readComposition(win);
   } catch (err) {
-    info = { duration: 1, width: 1920, height: 1080, tracks: [], hasTimeline: false, errors: [String(err.message ?? err)] };
+    info = { duration: 1, width: 1920, height: 1080, tracks: [], audio: [], hasTimeline: false, errors: [String(err.message ?? err)] };
   }
   size.w = info.width;
   size.h = info.height;

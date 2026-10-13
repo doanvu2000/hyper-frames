@@ -5,6 +5,8 @@ defineProps({ name: { type: String, required: true }, size: { type: Number, defa
 const PATHS = {
   play: ['M6 3l14 9-14 9V3z'],
   pause: ['M6 4h4v16H6z', 'M14 4h4v16h-4z'],
+  volume: ['M11 5 6 9H2v6h4l5 4V5z', 'M15.54 8.46a5 5 0 0 1 0 7.07', 'M19.07 4.93a10 10 0 0 1 0 14.14'],
+  'volume-x': ['M11 5 6 9H2v6h4l5 4V5z', 'm22 9-6 6', 'm16 9 6 6'],
   'skip-back': ['M19 20 9 12l10-8v16z', 'M5 19V5'],
   'chevron-left': ['m15 18-6-6 6-6'],
   'chevron-right': ['m9 18 6-6-6-6'],

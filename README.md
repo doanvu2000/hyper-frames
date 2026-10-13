@@ -30,7 +30,8 @@ Production-style: `npm run build && npm start`, then open http://127.0.0.1:8787.
   Renders run one at a time and are kept in `server/data/renders/<id>/`.
 - `web/` (Vue 3 + Vite) previews the same HTML in an iframe. A small shim seeks `window.__timelines` and hides
   timed elements outside their `data-start`/`data-duration` window, mirroring what the HyperFrames runtime does.
-  The dope sheet under the preview is read from the live GSAP timeline.
+  The dope sheet under the preview is read from the live GSAP timeline. <audio> clips are fetched and played with Web
+  Audio in the app window rather than inside the iframe, so download managers such as IDM do not grab them.
 - **Custom HTML** mode accepts any HyperFrames composition. The server binds to `127.0.0.1` by default because
   it renders whatever HTML it is sent; set `HOST` only on a trusted network.
 

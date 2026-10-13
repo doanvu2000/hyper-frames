@@ -7,8 +7,10 @@ const props = defineProps({
   duration: { type: Number, default: 1 },
   playing: { type: Boolean, default: false },
   size: { type: String, default: '' },
+  hasAudio: { type: Boolean, default: false },
+  muted: { type: Boolean, default: false },
 });
-const emit = defineEmits(['toggle', 'seek']);
+const emit = defineEmits(['toggle', 'seek', 'mute']);
 const step = (dir) => emit('seek', Math.min(props.duration, Math.max(0, props.time + dir / PREVIEW_FPS)));
 </script>
 
@@ -32,6 +34,17 @@ const step = (dir) => emit('seek', Math.min(props.duration, Math.max(0, props.ti
       </button>
       <button type="button" class="icon-btn" aria-label="Next frame" @click="step(1)">
         <Icon name="chevron-right" />
+      </button>
+      <button
+        v-if="hasAudio"
+        type="button"
+        class="icon-btn"
+        :aria-label="muted ? 'Unmute preview' : 'Mute preview'"
+        :aria-pressed="muted"
+        :title="muted ? 'Unmute preview' : 'Mute preview'"
+        @click="emit('mute')"
+      >
+        <Icon :name="muted ? 'volume-x' : 'volume'" />
       </button>
     </div>
     <p class="transport-time" aria-live="off">

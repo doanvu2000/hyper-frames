@@ -25,12 +25,40 @@ const ERROR_TRAP = `<script>window.__timelines=window.__timelines||{};window.__h
 // rev forces a reload even when a buffer receives markup it already showed two edits ago.
 // base points relative asset URLs at the imported project, since srcdoc documents resolve against the app's URL.
 export function withPreviewShim(html, rev, base = '') {
+  html = muteAudio(html);
   const head = html.match(/<head[^>]*>/i);
   const prefix = (base ? `<base href="${base}">` : '') + ERROR_TRAP;
   let out = head ? html.replace(head[0], head[0] + prefix) : prefix + html;
   const at = out.lastIndexOf('</body>');
   out = at === -1 ? out + SHIM : out.slice(0, at) + SHIM + out.slice(at);
   return `${out}\n<!-- preview rev ${rev} -->`;
+}
+
+// The preview never plays audio, and loading .ogg/.mp3/.wav makes download managers such as IDM pop up a
+// download for every sound, so <audio> (and its <source> children) lose their src in the preview only.
+function muteAudio(html) {
+  const unsrc = (markup) => markup.replace(/(\s)src(\s*=)/gi, '$1data-preview-src$2');
+  return html.replace(/<audio\b[\s\S]*?<\/audio>/gi, unsrc).replace(/<audio\b[^>]*>/gi, unsrc);
+}
+
+function readAudio(doc) {
+  const clips = [];
+  for (const el of doc.querySelectorAll('audio')) {
+    const src = el.getAttribute('data-preview-src') ?? el.querySelector('source[data-preview-src]')?.getAttribute('data-preview-src');
+    if (!src) continue;
+    const num = (name, fallback) => {
+      const v = parseFloat(el.getAttribute(name));
+      return Number.isFinite(v) ? v : fallback;
+    };
+    clips.push({
+      url: new URL(src, doc.baseURI).href,
+      start: num('data-start', 0),
+      duration: num('data-duration', null),
+      offset: num('data-media-start', 0),
+      volume: Math.max(0, num('data-volume', 1)),
+    });
+  }
+  return clips;
 }
 
 function describe(targets) {
@@ -68,6 +96,7 @@ export function readComposition(win) {
     width: parseInt(root?.getAttribute('data-width'), 10) || 1920,
     height: parseInt(root?.getAttribute('data-height'), 10) || 1080,
     tracks,
+    audio: readAudio(doc),
     hasTimeline: Boolean(tl),
     errors: [...(win.__hfErrors ?? [])],
   };

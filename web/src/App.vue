@@ -10,6 +10,7 @@ import Inspector from './components/Inspector.vue';
 import RenderPanel from './components/RenderPanel.vue';
 import RenderList from './components/RenderList.vue';
 import ConnectionsMenu from './components/ConnectionsMenu.vue';
+import { PreviewAudio } from './lib/previewAudio.js';
 
 // v2: template defaults changed (Geist font); older drafts would pin the old typeface.
 const DRAFT_KEY = 'hfs-draft-v2';
@@ -31,10 +32,13 @@ const assets = ref(null);
 const html = ref('');
 const composing = ref(false);
 const composeError = ref('');
-const info = reactive({ duration: 1, width: 1920, height: 1080, tracks: [] });
+const info = reactive({ duration: 1, width: 1920, height: 1080, tracks: [], audio: [] });
 
 const time = ref(POSTER_TIME);
 const playing = ref(false);
+const sound = new PreviewAudio();
+const muted = ref(readMuted());
+sound.setMuted(muted.value);
 
 const renders = ref([]);
 const submitting = ref(false);
@@ -229,6 +233,23 @@ const lastFrame = () => Math.max(0, info.duration - 1 / 30);
 function onReady(next) {
   Object.assign(info, next);
   if (time.value > lastFrame()) time.value = Math.min(POSTER_TIME, lastFrame());
+  sound.setClips(next.audio);
+  if (playing.value) sound.play(time.value);
+}
+
+function readMuted() {
+  try {
+    return localStorage.getItem('hfs-muted') === '1';
+  } catch {
+    return false;
+  }
+}
+function toggleMute() {
+  muted.value = !muted.value;
+  sound.setMuted(muted.value);
+  try {
+    localStorage.setItem('hfs-muted', muted.value ? '1' : '0');
+  } catch {}
 }
 
 let raf = 0;
@@ -237,7 +258,10 @@ function frame(now) {
   const dt = (now - last) / 1000;
   last = now;
   let t = time.value + dt;
-  if (t >= info.duration) t = 0;
+  if (t >= info.duration) {
+    t = 0;
+    sound.play(0);
+  }
   time.value = t;
   raf = requestAnimationFrame(frame);
 }
@@ -247,10 +271,12 @@ function play() {
   playing.value = true;
   last = performance.now();
   raf = requestAnimationFrame(frame);
+  sound.play(time.value);
 }
 function pause() {
   playing.value = false;
   cancelAnimationFrame(raf);
+  sound.stop();
 }
 const toggle = () => (playing.value ? pause() : play());
 function seek(t) {
@@ -380,6 +406,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   cancelAnimationFrame(raf);
+  sound.stop();
   stream?.close();
 });
 </script>
@@ -419,7 +446,17 @@ onBeforeUnmount(() => {
       <main id="stage" class="ws-stage" tabindex="-1">
         <h1 class="visually-hidden">Preview</h1>
         <PreviewStage :html="html" :base="previewBase" :time="time" :busy="composing" :error="composeError" @ready="onReady" />
-        <Transport :time="time" :duration="info.duration" :playing="playing" :size="sizeLabel" @toggle="toggle" @seek="seek" />
+        <Transport
+          :time="time"
+          :duration="info.duration"
+          :playing="playing"
+          :size="sizeLabel"
+          :has-audio="info.audio.length > 0"
+          :muted="muted"
+          @toggle="toggle"
+          @seek="seek"
+          @mute="toggleMute"
+        />
         <DopeSheet :duration="info.duration" :time="time" :tracks="info.tracks" @seek="seek" @scrub-start="pause" />
       </main>
 

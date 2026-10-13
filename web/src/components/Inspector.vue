@@ -119,8 +119,8 @@ const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' }
       </div>
       <p v-if="htmlProblem" class="field-error" role="alert"><Icon name="alert" :size="14" /> {{ htmlProblem }}</p>
       <p class="field-hint">
-        Keep scripts deterministic: no <code>Math.random()</code>, <code>Date.now()</code> or network calls. Video and
-        audio play only in the render, not in this preview.
+        Keep scripts deterministic: no <code>Math.random()</code>, <code>Date.now()</code> or network calls. Video plays
+        only in the render; audio clips play in the preview while it runs.
       </p>
     </template>
   </section>
