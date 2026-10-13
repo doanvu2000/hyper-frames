@@ -10,8 +10,9 @@ const props = defineProps({
   size: { type: String, default: '' },
   hasAudio: { type: Boolean, default: false },
   muted: { type: Boolean, default: false },
+  volume: { type: Number, default: 1 },
 });
-const emit = defineEmits(['toggle', 'seek', 'mute']);
+const emit = defineEmits(['toggle', 'seek', 'mute', 'volume']);
 const step = (dir) => emit('seek', Math.min(props.duration, Math.max(0, props.time + dir / PREVIEW_FPS)));
 </script>
 
@@ -45,8 +46,22 @@ const step = (dir) => emit('seek', Math.min(props.duration, Math.max(0, props.ti
         :title="muted ? t('transport.unmute') : t('transport.mute')"
         @click="emit('mute')"
       >
-        <Icon :name="muted ? 'volume-x' : 'volume'" />
+        <Icon :name="muted || volume === 0 ? 'volume-x' : 'volume'" />
       </button>
+      <input
+        v-if="hasAudio"
+        type="range"
+        class="volume-range"
+        min="0"
+        max="1"
+        step="0.05"
+        :value="muted ? 0 : volume"
+        :aria-label="t('transport.volume')"
+        :aria-valuetext="`${Math.round((muted ? 0 : volume) * 100)}%`"
+        :title="t('transport.volumeTitle', { p: Math.round((muted ? 0 : volume) * 100) })"
+        :style="{ '--fill': `${(muted ? 0 : volume) * 100}%` }"
+        @input="emit('volume', parseFloat($event.target.value))"
+      />
     </div>
     <p class="transport-time" aria-live="off">
       <span class="tc-now">{{ timecode(time) }}</span>

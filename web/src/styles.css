@@ -664,6 +664,45 @@ code {
 .transport .icon-btn:hover {
   background: rgb(255 255 255 / 0.07);
 }
+.volume-range {
+  width: 84px;
+  height: 20px;
+  margin: 0 6px 0 2px;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+.volume-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--playhead) var(--fill), var(--well-line) var(--fill));
+}
+.volume-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--playhead) var(--fill), var(--well-line) var(--fill));
+}
+.volume-range::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  appearance: none;
+}
+.volume-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+.volume-range:focus-visible {
+  outline: 2px solid var(--playhead);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .icon-btn--play {
   width: 44px;
   height: 44px;

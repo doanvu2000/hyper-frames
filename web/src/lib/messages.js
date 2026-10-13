@@ -184,6 +184,8 @@ export const MESSAGES = {
     'transport.next': 'Next frame',
     'transport.mute': 'Mute preview',
     'transport.unmute': 'Unmute preview',
+    'transport.volume': 'Preview volume',
+    'transport.volumeTitle': 'Volume {p}%',
     'transport.frame': 'Frame {n}',
     'transport.fps': '{fps} fps preview',
 
@@ -431,6 +433,8 @@ export const MESSAGES = {
     'transport.next': 'Frame sau',
     'transport.mute': 'Tắt tiếng preview',
     'transport.unmute': 'Bật tiếng preview',
+    'transport.volume': 'Âm lượng preview',
+    'transport.volumeTitle': 'Âm lượng {p}%',
     'transport.frame': 'Frame {n}',
     'transport.fps': 'Preview {fps} fps',
 

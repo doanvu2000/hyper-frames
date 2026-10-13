@@ -42,6 +42,8 @@ const playing = ref(false);
 const sound = new PreviewAudio();
 const muted = ref(readMuted());
 sound.setMuted(muted.value);
+const volume = ref(readVolume());
+sound.setVolume(volume.value);
 
 const renders = ref([]);
 const submitting = ref(false);
@@ -291,9 +293,27 @@ function readMuted() {
     return false;
   }
 }
+function readVolume() {
+  try {
+    const v = parseFloat(localStorage.getItem('hfs-volume'));
+    return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.8;
+  } catch {
+    return 0.8;
+  }
+}
+function setVolume(v) {
+  volume.value = v;
+  sound.setVolume(v);
+  if (muted.value && v > 0) toggleMute();
+  try {
+    localStorage.setItem('hfs-volume', String(v));
+  } catch {}
+}
 function toggleMute() {
   muted.value = !muted.value;
   sound.setMuted(muted.value);
+const volume = ref(readVolume());
+sound.setVolume(volume.value);
   try {
     localStorage.setItem('hfs-muted', muted.value ? '1' : '0');
   } catch {}
@@ -530,9 +550,11 @@ onBeforeUnmount(() => {
           :size="sizeLabel"
           :has-audio="info.audio.length > 0"
           :muted="muted"
+          :volume="volume"
           @toggle="toggle"
           @seek="seek"
           @mute="toggleMute"
+          @volume="setVolume"
         />
         <DopeSheet :duration="info.duration" :time="time" :tracks="info.tracks" @seek="seek" @scrub-start="pause" />
       </main>

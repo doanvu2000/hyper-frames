@@ -8,6 +8,7 @@ export class PreviewAudio {
   #sources = [];
   #session = 0;
   muted = false;
+  volume = 1;
 
   setClips(clips) {
     this.stop();
@@ -17,7 +18,17 @@ export class PreviewAudio {
 
   setMuted(muted) {
     this.muted = muted;
-    if (this.#gain) this.#gain.gain.value = muted ? 0 : 1;
+    this.#applyGain();
+  }
+
+  setVolume(volume) {
+    this.volume = Math.min(1, Math.max(0, volume));
+    this.#applyGain();
+  }
+
+  // Squared so the slider feels even to the ear; a linear gain crowds all the change into the bottom fifth.
+  #applyGain() {
+    if (this.#gain) this.#gain.gain.value = this.muted ? 0 : this.volume ** 2;
   }
 
   play(t) {
@@ -62,8 +73,8 @@ export class PreviewAudio {
     if (!this.#ctx) {
       this.#ctx = new AudioContext();
       this.#gain = this.#ctx.createGain();
-      this.#gain.gain.value = this.muted ? 0 : 1;
       this.#gain.connect(this.#ctx.destination);
+      this.#applyGain();
     }
     return this.#ctx;
   }
