@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { killTree } from './renderQueue.js';
 
+const IS_WINDOWS = process.platform === 'win32';
+
 export const MCP_NAME = 'hyperframes-studio';
 
 export const CLIS = {
@@ -73,14 +75,11 @@ export async function probeCli(id) {
 
 // The CLIs are npm shims (.cmd/.ps1) on Windows, which only start through a shell. Node 24 deprecates
 // passing an args array together with shell: true, so build one quoted command line instead.
+// macOS and Linux run the binary directly: a POSIX shell would expand $ and backticks inside the quotes.
 export function runCommand(bin, args, { input, signal, timeoutMs, cwd, onStdout } = {}) {
   return new Promise((resolve) => {
-    const child = spawn([bin, ...args].map(quoteArg).join(' '), {
-      shell: true,
-      cwd,
-      windowsHide: true,
-      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
-    });
+    const options = { cwd, windowsHide: true, detached: !IS_WINDOWS, env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' } };
+    const child = IS_WINDOWS ? spawn([bin, ...args].map(quoteArg).join(' '), { ...options, shell: true }) : spawn(bin, args, options);
     let stdout = '';
     let stderr = '';
     let lineBuffer = '';

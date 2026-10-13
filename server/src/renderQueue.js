@@ -113,6 +113,10 @@ export class RenderQueue extends EventEmitter {
     this.#run(job);
   }
 
+  stopAll() {
+    if (this.active) killTree(this.active.child);
+  }
+
   #run(job) {
     const dir = path.join(this.dataDir, job.id);
     const args = [CLI_BIN, 'render', '-o', job.file, '-f', String(job.fps), '-q', job.quality, '--format', job.format];
@@ -120,6 +124,7 @@ export class RenderQueue extends EventEmitter {
       cwd: dir,
       env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', CI: '1' },
       windowsHide: true,
+      detached: process.platform !== 'win32',
     });
     this.active = { id: job.id, child };
     Object.assign(job, { status: 'running', stage: 'starting', startedAt: new Date().toISOString() });
@@ -200,12 +205,17 @@ function summarizeFailure(log, code) {
   return lines.length ? lines.join('\n') : `HyperFrames exited with code ${code}.`;
 }
 
-// Chrome workers are grandchildren of the CLI; on Windows a plain kill() leaves them running.
+// Chrome workers are grandchildren of the CLI; a plain kill() leaves them running. On macOS and Linux
+// children start detached (own process group), so signalling the negative pid reaches the whole group.
 export function killTree(child) {
   if (!child.pid || child.exitCode !== null) return;
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true });
-  } else {
+    return;
+  }
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch {
     child.kill('SIGTERM');
   }
 }

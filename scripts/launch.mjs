@@ -30,7 +30,8 @@ if (running) {
     process.exit(0);
   }
   if (!running.pid) {
-    fail('An older version of the studio is still running. Close its window (or stop it in Task Manager: node.exe), then open the studio again.');
+    const where = process.platform === 'win32' ? 'Task Manager: node.exe' : 'Activity Monitor: node';
+    fail(`An older version of the studio is still running. Close its window (or stop it in ${where}), then open the studio again.`);
   }
   if (running.busy) {
     console.warn('\n  ! The studio was updated, but a render is still running in the open studio window.');
@@ -48,7 +49,8 @@ if (running) {
 }
 
 if (spawnSync('ffmpeg', ['-version'], { windowsHide: true }).status !== 0) {
-  console.warn('\n  ! FFmpeg was not found. The studio will open, but rendering needs FFmpeg on PATH.\n');
+  const hint = process.platform === 'darwin' ? ' Install it with "brew install ffmpeg".' : '';
+  console.warn(`\n  ! FFmpeg was not found. The studio will open, but rendering needs FFmpeg on PATH.${hint}\n`);
 }
 
 step('Starting HyperFrames Studio');

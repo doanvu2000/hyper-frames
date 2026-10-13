@@ -26,6 +26,14 @@ const BOOTED_AT = Date.now();
 
 const queue = new RenderQueue(path.join(DATA_ROOT, 'renders'));
 await queue.load();
+
+// Renders run in their own process group on macOS/Linux, so closing the terminal would orphan Chrome without this.
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(sig, () => {
+    queue.stopAll();
+    process.exit(0);
+  });
+}
 const projects = new ProjectStore(path.join(DATA_ROOT, 'projects'));
 const config = new Config(path.join(DATA_ROOT, 'config.json'));
 await config.load();

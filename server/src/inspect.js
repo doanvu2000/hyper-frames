@@ -57,6 +57,7 @@ function runHf(cwd, args) {
       cwd,
       env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', CI: '1' },
       windowsHide: true,
+      detached: process.platform !== 'win32',
     });
     let stdout = '';
     let stderr = '';
