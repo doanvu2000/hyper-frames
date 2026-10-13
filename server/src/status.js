@@ -111,6 +111,7 @@ export class StatusHub extends EventEmitter {
           available: Boolean(probe.installed && probe.loggedIn),
           detail: probe.detail ?? '',
           login: cli.login,
+          install: cli.install,
           mcp: {
             registered: Boolean(probe.mcpRegistered),
             sessions: sessions.length,

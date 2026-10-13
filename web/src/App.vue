@@ -10,6 +10,8 @@ import Inspector from './components/Inspector.vue';
 import RenderPanel from './components/RenderPanel.vue';
 import RenderList from './components/RenderList.vue';
 import ConnectionsMenu from './components/ConnectionsMenu.vue';
+import PanelSplitter from './components/PanelSplitter.vue';
+import FirstRunGuide from './components/FirstRunGuide.vue';
 import { PreviewAudio } from './lib/previewAudio.js';
 
 // v2: template defaults changed (Geist font); older drafts would pin the old typeface.
@@ -21,7 +23,7 @@ const health = ref(null);
 const status = ref(null);
 const loadError = ref('');
 
-const mode = ref('template');
+const mode = ref('html');
 const templateId = ref('title-card');
 const aspect = ref('16:9');
 const valuesByTemplate = reactive({});
@@ -48,6 +50,12 @@ const theme = ref(document.documentElement.dataset.theme ?? 'system');
 const thumbs = reactive({});
 const sideTab = ref('edit');
 const toasts = ref([]);
+
+const LAYOUT_KEY = 'hfs-layout';
+const PANEL = { rail: { min: 200, max: 440, initial: 236 }, side: { min: 300, max: 600, initial: 360 } };
+const layout = reactive(readLayout());
+const GUIDE_KEY = 'hfs-guide-v1';
+const guideOpen = ref(!readFlag(GUIDE_KEY));
 let toastSeq = 0;
 
 const template = computed(() => catalog.templates.find((t) => t.id === templateId.value) ?? null);
@@ -153,6 +161,14 @@ function openCustom() {
   mode.value = 'html';
 }
 
+// A first visit opens on AI & custom HTML; start the editor from a template so the preview is not empty.
+async function seedCustomHtml() {
+  try {
+    const res = await api('/compose', { method: 'POST', body: { templateId: templateId.value, values: values.value, aspect: aspect.value } });
+    customHtml.value = res.html;
+  } catch {}
+}
+
 async function loadTemplateIntoEditor() {
   if (customHtml.value.trim() && !window.confirm('Replace the HTML in the editor with the current template?')) return;
   try {
@@ -235,6 +251,36 @@ function onReady(next) {
   if (time.value > lastFrame()) time.value = Math.min(POSTER_TIME, lastFrame());
   sound.setClips(next.audio);
   if (playing.value) sound.play(time.value);
+}
+
+function readLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? '{}');
+    const pick = (k) => (Number.isFinite(saved[k]) ? Math.min(PANEL[k].max, Math.max(PANEL[k].min, saved[k])) : PANEL[k].initial);
+    return { rail: pick('rail'), side: pick('side') };
+  } catch {
+    return { rail: PANEL.rail.initial, side: PANEL.side.initial };
+  }
+}
+function resizePanel(key, width) {
+  layout[key] = width;
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+  } catch {}
+}
+
+function readFlag(key) {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+function closeGuide() {
+  guideOpen.value = false;
+  try {
+    localStorage.setItem(GUIDE_KEY, '1');
+  } catch {}
 }
 
 function readMuted() {
@@ -394,6 +440,7 @@ onMounted(async () => {
     catalog.aspects = data.aspects;
     for (const t of data.templates) valuesByTemplate[t.id] = defaultsFor(t);
     restoreDraft();
+    if (mode.value === 'html' && !customHtml.value.trim()) await seedCustomHtml();
     scheduleCompose(0);
     loadThumbs();
   } catch (err) {
@@ -425,6 +472,9 @@ onBeforeUnmount(() => {
         <span v-if="health.ffmpeg">Ready to render</span>
         <span v-else>FFmpeg not found. Install it and restart the server to render.</span>
       </p>
+      <button type="button" class="icon-btn" aria-label="Open the getting started guide" title="Getting started" @click="guideOpen = true">
+        <Icon name="help" />
+      </button>
       <button type="button" class="icon-btn" :aria-label="`Theme: ${theme}. Change theme`" :title="`Theme: ${theme}`" @click="cycleTheme">
         <Icon :name="themeIcon[theme]" />
       </button>
@@ -432,7 +482,7 @@ onBeforeUnmount(() => {
 
     <p v-if="loadError" class="banner" role="alert"><Icon name="alert" :size="16" /> {{ loadError }}</p>
 
-    <div class="workspace">
+    <div class="workspace" :style="{ '--rail-w': `${layout.rail}px`, '--side-w': `${layout.side}px` }">
       <TemplateRail
         class="ws-rail"
         :templates="catalog.templates"
@@ -441,6 +491,17 @@ onBeforeUnmount(() => {
         :mode="mode"
         @select="selectTemplate"
         @custom="openCustom"
+      />
+
+      <PanelSplitter
+        class="ws-split ws-split--rail"
+        label="Resize the start panel"
+        edge="left"
+        :width="layout.rail"
+        :min="PANEL.rail.min"
+        :max="PANEL.rail.max"
+        @resize="(w) => resizePanel('rail', w)"
+        @reset="resizePanel('rail', PANEL.rail.initial)"
       />
 
       <main id="stage" class="ws-stage" tabindex="-1">
@@ -459,6 +520,17 @@ onBeforeUnmount(() => {
         />
         <DopeSheet :duration="info.duration" :time="time" :tracks="info.tracks" @seek="seek" @scrub-start="pause" />
       </main>
+
+      <PanelSplitter
+        class="ws-split ws-split--side"
+        label="Resize the edit and render panel"
+        edge="right"
+        :width="layout.side"
+        :min="PANEL.side.min"
+        :max="PANEL.side.max"
+        @resize="(w) => resizePanel('side', w)"
+        @reset="resizePanel('side', PANEL.side.initial)"
+      />
 
       <aside class="ws-side">
         <div class="tabs" role="tablist" aria-label="Side panel">
@@ -523,6 +595,14 @@ onBeforeUnmount(() => {
       </aside>
     </div>
   </div>
+
+  <FirstRunGuide
+    :open="guideOpen"
+    :status="status"
+    @close="closeGuide"
+    @status="(s) => (status = s)"
+    @start="openCustom(), (sideTab = 'edit')"
+  />
 
   <div class="toasts" aria-live="polite">
     <div v-for="t in toasts" :key="t.id" class="toast" :data-tone="t.tone">

@@ -1593,6 +1593,261 @@ code {
   color: var(--signal);
 }
 
+/* ---------- Start rail ---------- */
+
+.rail-item--lead {
+  height: auto;
+}
+.rail-item--lead .thumb {
+  aspect-ratio: auto;
+  height: 72px;
+}
+.rail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  margin-top: 12px;
+  padding: 6px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.rail-toggle:hover {
+  color: var(--ink);
+}
+.rail-count {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rail-chevron {
+  transition: transform 150ms var(--ease-out);
+}
+.rail-toggle[aria-expanded='true'] .rail-chevron {
+  transform: rotate(180deg);
+}
+.rail-toggle + .rail-list {
+  margin-top: 4px;
+}
+
+/* ---------- Panel splitters ---------- */
+
+.ws-split {
+  display: none;
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+.ws-split--rail {
+  grid-area: split-rail;
+}
+.ws-split--side {
+  grid-area: split-side;
+}
+.ws-split::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 150ms var(--ease-out), background-color 150ms var(--ease-out), height 150ms var(--ease-out);
+}
+.ws-split:hover::after,
+.ws-split:focus-visible::after,
+.is-resizing .ws-split::after {
+  opacity: 1;
+}
+.ws-split:focus-visible::after,
+.ws-split:active::after {
+  height: 72px;
+  background: var(--signal);
+}
+.is-resizing,
+.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+.is-resizing iframe {
+  pointer-events: none;
+}
+
+/* ---------- Getting started guide ---------- */
+
+.guide {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 22px 24px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 24px 64px rgb(16 18 24 / 0.24);
+  overflow-y: auto;
+}
+.guide[open] {
+  animation: toast-in 200ms var(--ease-out);
+}
+.guide::backdrop {
+  background: rgb(12 13 17 / 0.55);
+}
+.guide-head {
+  position: relative;
+  padding-right: 44px;
+}
+.guide-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+.guide-title {
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.guide-close {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+}
+.guide-dots {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.guide-dots li {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.guide-dots li[data-done='true'],
+.guide-dots li[data-current='true'] {
+  background: var(--signal);
+}
+.guide-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.guide-body > .ghost-btn {
+  align-self: flex-start;
+}
+.guide-clis {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.guide-cli {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.guide-cli--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.guide-cli-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.guide-cli-name {
+  font-weight: 600;
+}
+.guide-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.guide-cmd code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.guide-cmd--quote code {
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+.guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+}
+.guide-tip {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--signal-soft);
+  color: var(--ink);
+}
+.guide-tip .icon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--signal);
+}
+.guide-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.guide-foot-hint {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.guide-foot .secondary-btn {
+  width: auto;
+  margin: 0 0 0 auto;
+  padding: 0 16px;
+}
+.state-dot[data-state='warn'] {
+  box-shadow: inset 0 0 0 1.5px var(--busy);
+}
+.state-pill[data-state='warn'] {
+  color: var(--busy-ink);
+}
+
 /* ---------- Breakpoints ---------- */
 
 /* Below desktop the page scrolls, so the preview hugs the video's own shape and Render stays pinned to the screen. */
@@ -1672,8 +1927,12 @@ code {
   .workspace {
     flex: 1;
     min-height: 0;
-    grid-template-columns: 236px minmax(0, 1fr) 360px;
-    grid-template-areas: 'rail stage side';
+    grid-template-columns: min(var(--rail-w, 236px), 25vw) 20px minmax(0, 1fr) 20px min(var(--side-w, 360px), 35vw);
+    grid-template-areas: 'rail split-rail stage split-side side';
+    column-gap: 0;
+  }
+  .ws-split {
+    display: block;
   }
   .ws-rail {
     align-self: start;
