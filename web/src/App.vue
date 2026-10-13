@@ -290,7 +290,7 @@ function upsert(job) {
   if (i === -1) renders.value = [job, ...renders.value];
   else renders.value.splice(i, 1, job);
   if (before === job.status || (before !== 'running' && before !== 'queued')) return;
-  if (job.status === 'done') toast(`${job.name} is ready`, { label: 'Download', href: fileUrl(job.id) });
+  if (job.status === 'done') toast(`${job.name} is ready`, { label: 'Download', href: fileUrl(job) });
   else if (job.status === 'failed') toast(`${job.name} failed to render`, { label: 'Details', run: () => (sideTab.value = 'renders') }, 'error');
 }
 

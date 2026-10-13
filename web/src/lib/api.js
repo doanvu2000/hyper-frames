@@ -14,4 +14,8 @@ export async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
-export const fileUrl = (id, inline = false) => `/api/renders/${id}/file${inline ? '?inline=1' : ''}`;
+// Ending the URL with the real file name keeps download managers (IDM) from guessing a name and type of their own.
+export function fileUrl(job, inline = false) {
+  const slug = String(job.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'render';
+  return `/api/renders/${job.id}/file/${slug}-${job.id.slice(0, 6)}.${job.format}${inline ? '?inline=1' : ''}`;
+}

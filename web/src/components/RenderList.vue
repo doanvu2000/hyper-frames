@@ -98,7 +98,7 @@ function confirmRemove(job) {
           >
             <Icon name="eye" :size="14" /> {{ watching === job.id ? 'Hide' : 'Watch' }}
           </button>
-          <a v-if="job.status === 'done'" class="text-btn" :href="fileUrl(job.id)" download>
+          <a v-if="job.status === 'done'" class="text-btn" :href="fileUrl(job)" download>
             <Icon name="download" :size="14" /> Download
           </a>
           <button
@@ -115,8 +115,8 @@ function confirmRemove(job) {
         </div>
 
         <div v-if="watching === job.id" class="job-player">
-          <img v-if="job.format === 'gif'" :src="fileUrl(job.id, true)" :alt="`${job.name} render`" />
-          <video v-else :src="fileUrl(job.id, true)" controls playsinline loop />
+          <img v-if="job.format === 'gif'" :src="fileUrl(job, true)" :alt="`${job.name} render`" />
+          <video v-else :src="fileUrl(job, true)" controls playsinline loop />
         </div>
       </li>
     </ul>

@@ -270,7 +270,7 @@ app.delete('/api/renders/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/renders/:id/file', (req, res) => {
+app.get(['/api/renders/:id/file', '/api/renders/:id/file/:name'], (req, res) => {
   const job = queue.get(req.params.id);
   if (!job || job.status !== 'done') throw new HttpError(404, 'This render has no finished file yet.');
   const file = queue.filePath(job);
