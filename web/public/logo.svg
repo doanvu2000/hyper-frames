@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="96 96 832 832">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A84FF"/>
+      <stop offset="1" stop-color="#5E5CE6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".22"/>
+      <stop offset=".48" stop-color="#FFFFFF" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="96" y="96" width="832" height="832" rx="188" fill="url(#bg)"/>
+  <rect x="97" y="97" width="830" height="830" rx="187" fill="url(#shine)"/>
+  <g transform="rotate(-8 512 512)">
+    <rect x="257" y="309" width="480" height="340" rx="48" fill="#DCEBFF" opacity=".72"/>
+    <rect x="293" y="343" width="480" height="340" rx="48" fill="#F4F8FF" opacity=".9"/>
+    <rect x="329" y="377" width="480" height="340" rx="48" fill="#FFFFFF"/>
+    <path d="M389 430h62v62h-62zM487 430h62v62h-62zM585 430h62v62h-62zM683 430h62v62h-62z" fill="#0A84FF" opacity=".2"/>
+    <path d="M389 602h62v62h-62zM487 602h62v62h-62zM585 602h62v62h-62zM683 602h62v62h-62z" fill="#5E5CE6" opacity=".18"/>
+    <path d="M452 492h206a22 22 0 0 1 22 22v64a22 22 0 0 1-22 22H452a22 22 0 0 1-22-22v-64a22 22 0 0 1 22-22z" fill="#0A84FF"/>
+    <path d="M526 510 620 546 526 582z" fill="#FFFFFF"/>
+  </g>
+  <path d="M730 282 788 310 758 370 700 342z" fill="#FFD60A"/>
+  <path d="M777 229 817 248 796 290 756 271z" fill="#FFD60A" opacity=".78"/>
+</svg>
