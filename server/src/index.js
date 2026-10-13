@@ -19,6 +19,7 @@ const WEB_DIST = path.resolve(here, '..', '..', 'web', 'dist');
 const FPS = [24, 25, 30, 50, 60];
 const QUALITY = ['draft', 'looks', 'delivery'];
 const MAX_HTML = 1_500_000;
+const BOOTED_AT = Date.now();
 
 const queue = new RenderQueue(path.join(DATA_ROOT, 'renders'));
 await queue.load();
@@ -34,6 +35,9 @@ app.get('/api/health', (_req, res) => {
     hyperframes: CLI_VERSION,
     ffmpeg: ffmpegAvailable(),
     node: process.version,
+    pid: process.pid,
+    bootedAt: BOOTED_AT,
+    busy: queue.list().some((j) => j.status === 'running' || j.status === 'queued'),
     ai: { ready: Boolean(config.anthropicApiKey), keySource: config.keySource, model: MODEL },
   });
 });
@@ -187,9 +191,12 @@ app.get('/api/renders/:id/file', (req, res) => {
   res.download(file, `${slug(job.name)}-${job.id.slice(0, 6)}.${OUTPUT_EXT[job.format]}`);
 });
 
-if (fs.existsSync(WEB_DIST)) {
+// Only the launcher / npm start serve the built UI. In dev a leftover web/dist would show a stale UI on this port.
+if (process.argv.includes('--serve-web') && fs.existsSync(WEB_DIST)) {
   app.use(express.static(WEB_DIST));
   app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(WEB_DIST, 'index.html')));
+} else {
+  app.get(/^(?!\/api\/).*/, (_req, res) => res.redirect(process.env.WEB_DEV_URL ?? 'http://localhost:5173'));
 }
 
 app.use((err, _req, res, _next) => {

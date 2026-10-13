@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch-path=src src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js --serve-web"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

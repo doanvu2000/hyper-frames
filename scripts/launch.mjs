@@ -11,14 +11,8 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const [major] = process.versions.node.split('.').map(Number);
 if (major < 22) fail(`HyperFrames needs Node.js 22 or newer. This machine has ${process.version}. Install it from https://nodejs.org`);
 
-if (await isRunning()) {
-  step('Studio is already running');
-  openBrowser();
-  process.exit(0);
-}
-
-if (!fs.existsSync(path.join(root, 'node_modules', 'hyperframes'))) {
-  step('First run: installing dependencies (one time, about a minute)');
+if (!fs.existsSync(path.join(root, 'node_modules', 'hyperframes')) || depsChanged()) {
+  step('Installing dependencies (about a minute)');
   run(npm, ['install', '--no-audit', '--no-fund']);
 }
 
@@ -27,12 +21,38 @@ if (webIsStale()) {
   run(npm, ['run', 'build']);
 }
 
+const running = await health();
+if (running) {
+  const serverChanged = newestMtime(walk(path.join(root, 'server', 'src'))) > (running.bootedAt ?? 0);
+  if (!serverChanged) {
+    step('Studio is already running');
+    openBrowser();
+    process.exit(0);
+  }
+  if (!running.pid) {
+    fail('An older version of the studio is still running. Close its window (or stop it in Task Manager: node.exe), then open the studio again.');
+  }
+  if (running.busy) {
+    console.warn('\n  ! The studio was updated, but a render is still running in the open studio window.');
+    console.warn('    Close that window when the render finishes, then open the studio again to load the update.\n');
+    openBrowser();
+    process.exit(0);
+  }
+  step('Restarting the studio to load the update');
+  try {
+    process.kill(running.pid);
+  } catch {
+    // Already gone.
+  }
+  for (let i = 0; i < 40 && (await health()); i++) await sleep(250);
+}
+
 if (spawnSync('ffmpeg', ['-version'], { windowsHide: true }).status !== 0) {
   console.warn('\n  ! FFmpeg was not found. The studio will open, but rendering needs FFmpeg on PATH.\n');
 }
 
 step('Starting HyperFrames Studio');
-const server = spawn(process.execPath, [path.join(root, 'server', 'src', 'index.js')], { cwd: root, stdio: 'inherit' });
+const server = spawn(process.execPath, [path.join(root, 'server', 'src', 'index.js'), '--serve-web'], { cwd: root, stdio: 'inherit' });
 server.on('exit', (code) => process.exit(code ?? 0));
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => server.kill(sig));
 
@@ -52,13 +72,28 @@ function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
 }
 
-async function isRunning() {
+function newestMtime(files) {
+  return Math.max(0, ...files.map((f) => fs.statSync(f).mtimeMs));
+}
+
+// npm rewrites node_modules/.package-lock.json on every install, so an older copy means new dependencies to fetch.
+function depsChanged() {
+  const installed = path.join(root, 'node_modules', '.package-lock.json');
+  const lock = path.join(root, 'package-lock.json');
+  return fs.existsSync(lock) && (!fs.existsSync(installed) || fs.statSync(lock).mtimeMs > fs.statSync(installed).mtimeMs);
+}
+
+async function health() {
   try {
     const res = await fetch(`${URL}/api/health`, { signal: AbortSignal.timeout(800) });
-    return res.ok;
+    return res.ok ? await res.json() : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+async function isRunning() {
+  return Boolean(await health());
 }
 
 function openBrowser() {
