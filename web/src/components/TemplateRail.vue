@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import Icon from './Icon.vue';
 import TemplateThumb from './TemplateThumb.vue';
+import { t } from '../lib/i18n.js';
 
 defineProps({
   templates: { type: Array, default: () => [] },
@@ -29,7 +30,7 @@ watch(showTemplates, (open) => {
 </script>
 
 <template>
-  <nav class="rail" aria-label="Start">
+  <nav class="rail" :aria-label="t('rail.nav')">
     <button
       type="button"
       class="rail-item rail-item--custom rail-item--lead"
@@ -39,8 +40,8 @@ watch(showTemplates, (open) => {
     >
       <span class="thumb thumb--code" aria-hidden="true"><Icon name="sparkles" :size="22" /></span>
       <span class="rail-text">
-        <span class="rail-name">AI &amp; custom HTML</span>
-        <span class="rail-summary">Generate with Claude or Codex, import a folder, or paste your own.</span>
+        <span class="rail-name">{{ t('rail.custom') }}</span>
+        <span class="rail-summary">{{ t('rail.customSummary') }}</span>
       </span>
     </button>
 
@@ -52,24 +53,24 @@ watch(showTemplates, (open) => {
       @click="showTemplates = !showTemplates"
     >
       <Icon name="layers" :size="14" />
-      <span>Templates</span>
+      <span>{{ t('rail.templates') }}</span>
       <span class="rail-count">{{ templates.length }}</span>
       <Icon name="chevron-down" :size="14" class="rail-chevron" />
     </button>
 
     <ul v-show="showTemplates" id="rail-templates" class="rail-list">
-      <li v-for="t in templates" :key="t.id">
+      <li v-for="tpl in templates" :key="tpl.id">
         <button
           type="button"
           class="rail-item"
-          :class="{ 'is-active': mode === 'template' && t.id === activeId }"
-          :aria-current="mode === 'template' && t.id === activeId ? 'true' : undefined"
-          @click="emit('select', t.id)"
+          :class="{ 'is-active': mode === 'template' && tpl.id === activeId }"
+          :aria-current="mode === 'template' && tpl.id === activeId ? 'true' : undefined"
+          @click="emit('select', tpl.id)"
         >
-          <TemplateThumb :html="thumbs[t.id]" :time="posterTime(t)" />
+          <TemplateThumb :html="thumbs[tpl.id]" :time="posterTime(tpl)" />
           <span class="rail-text">
-            <span class="rail-name">{{ t.name }}</span>
-            <span class="rail-summary">{{ t.summary }}</span>
+            <span class="rail-name">{{ tpl.name }}</span>
+            <span class="rail-summary">{{ tpl.summary }}</span>
           </span>
         </button>
       </li>

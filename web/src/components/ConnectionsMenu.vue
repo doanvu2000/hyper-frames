@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import Icon from './Icon.vue';
 import { api } from '../lib/api.js';
 import { connectionState, mostUrgent } from '../lib/connections.js';
+import { t, tr } from '../lib/i18n.js';
 
 const props = defineProps({
   status: { type: Object, default: null },
@@ -25,9 +26,9 @@ const ACTIVE = new Set(['rendering', 'running', 'calling', 'connected']);
 const lead = computed(() => mostUrgent(rows.value));
 const readyCount = computed(() => rows.value.filter((r) => r.state.key !== 'off' && r.state.key !== 'checking').length);
 const triggerText = computed(() => {
-  if (!lead.value) return 'AI connections';
+  if (!lead.value) return t('conn.menu');
   if (ACTIVE.has(lead.value.state.key)) return `${lead.value.conn.label} · ${lead.value.state.label}`;
-  return readyCount.value ? `AI · ${readyCount.value} ready` : 'AI · not connected';
+  return readyCount.value ? t('conn.someReady', { n: readyCount.value }) : t('conn.noneReady');
 });
 
 async function refresh() {
@@ -80,7 +81,7 @@ onBeforeUnmount(() => {
       class="conn-trigger"
       :aria-expanded="open"
       aria-controls="conn-panel"
-      :title="lead?.state.detail ?? 'AI connections'"
+      :title="lead?.state.detail ?? t('conn.menu')"
       @click="open = !open"
     >
       <span class="state-dot" :data-state="lead?.state.key ?? 'checking'" aria-hidden="true" />
@@ -88,11 +89,11 @@ onBeforeUnmount(() => {
       <Icon name="chevron-down" :size="14" />
     </button>
 
-    <div v-if="open" id="conn-panel" class="conn-panel" role="dialog" aria-label="AI connections">
+    <div v-if="open" id="conn-panel" class="conn-panel" role="dialog" :aria-label="t('conn.menu')">
       <div class="conn-panel-head">
-        <h2 class="panel-title">AI connections</h2>
+        <h2 class="panel-title">{{ t('conn.menu') }}</h2>
         <button type="button" class="ghost-btn" :disabled="busy === 'refresh' || status?.checking" @click="refresh">
-          <Icon name="refresh" :size="14" :class="{ spin: busy === 'refresh' || status?.checking }" /> Check again
+          <Icon name="refresh" :size="14" :class="{ spin: busy === 'refresh' || status?.checking }" /> {{ t('conn.checkAgain') }}
         </button>
       </div>
 
@@ -109,7 +110,7 @@ onBeforeUnmount(() => {
           <p v-if="conn.mcp && conn.available && conn.detail !== state.detail" class="conn-sub">{{ conn.detail }}</p>
 
           <div v-if="conn.mcp && conn.available" class="conn-mcp">
-            <span v-if="conn.mcp.registered" class="conn-mcp-text"><Icon name="plug" :size="14" /> Added to {{ conn.app }}</span>
+            <span v-if="conn.mcp.registered" class="conn-mcp-text"><Icon name="plug" :size="14" /> {{ t('conn.addedTo', { app: conn.app }) }}</span>
             <button
               v-if="conn.mcp.registered"
               type="button"
@@ -117,25 +118,21 @@ onBeforeUnmount(() => {
               :disabled="busy === conn.id"
               @click="setMcp(conn, false)"
             >
-              Remove
+              {{ t('conn.remove') }}
             </button>
             <button v-else type="button" class="text-btn conn-add" :disabled="busy === conn.id" @click="setMcp(conn, true)">
-              <Icon :name="busy === conn.id ? 'loader' : 'plug'" :size="14" :class="{ spin: busy === conn.id }" /> Add to {{ conn.app }}
+              <Icon :name="busy === conn.id ? 'loader' : 'plug'" :size="14" :class="{ spin: busy === conn.id }" /> {{ t('conn.addTo', { app: conn.app }) }}
             </button>
           </div>
-          <p v-else-if="conn.mcp && conn.installed && conn.checked" class="conn-sub">Sign in from a terminal: <code>{{ conn.login }}</code></p>
+          <p v-else-if="conn.mcp && conn.installed && conn.checked" class="conn-sub">{{ t('conn.signIn') }} <code>{{ conn.login }}</code></p>
         </li>
       </ul>
 
       <p v-if="error" class="field-error" role="alert"><Icon name="alert" :size="14" /> {{ error }}</p>
 
       <div class="conn-howto">
-        <p class="group-title">Make videos from a terminal</p>
-        <p class="field-hint">
-          After adding, open a new <code>claude</code> or <code>codex</code> session in any folder and ask, for example:
-          “Use HyperFrames Studio to make a 6-second intro for my app, show it in the Studio, then render an MP4.”
-          Sessions that were already open need a restart to see the Studio.
-        </p>
+        <p class="group-title">{{ t('conn.howtoTitle') }}</p>
+        <p class="field-hint" v-html="tr('conn.howto', { example: t('guide.example') })" />
       </div>
     </div>
   </div>

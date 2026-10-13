@@ -1,5 +1,6 @@
 <script setup>
 import Icon from './Icon.vue';
+import { t } from '../lib/i18n.js';
 import { timecode, frameOf, PREVIEW_FPS } from '../lib/timecode.js';
 
 const props = defineProps({
@@ -17,31 +18,31 @@ const step = (dir) => emit('seek', Math.min(props.duration, Math.max(0, props.ti
 <template>
   <div class="transport">
     <div class="transport-buttons">
-      <button type="button" class="icon-btn" aria-label="Go to start" @click="emit('seek', 0)">
+      <button type="button" class="icon-btn" :aria-label="t('transport.start')" @click="emit('seek', 0)">
         <Icon name="skip-back" />
       </button>
-      <button type="button" class="icon-btn" aria-label="Previous frame" @click="step(-1)">
+      <button type="button" class="icon-btn" :aria-label="t('transport.prev')" @click="step(-1)">
         <Icon name="chevron-left" />
       </button>
       <button
         type="button"
         class="icon-btn icon-btn--play"
-        :aria-label="playing ? 'Pause' : 'Play'"
+        :aria-label="playing ? t('transport.pause') : t('transport.play')"
         :aria-pressed="playing"
         @click="emit('toggle')"
       >
         <Icon :name="playing ? 'pause' : 'play'" :size="20" />
       </button>
-      <button type="button" class="icon-btn" aria-label="Next frame" @click="step(1)">
+      <button type="button" class="icon-btn" :aria-label="t('transport.next')" @click="step(1)">
         <Icon name="chevron-right" />
       </button>
       <button
         v-if="hasAudio"
         type="button"
         class="icon-btn"
-        :aria-label="muted ? 'Unmute preview' : 'Mute preview'"
+        :aria-label="muted ? t('transport.unmute') : t('transport.mute')"
         :aria-pressed="muted"
-        :title="muted ? 'Unmute preview' : 'Mute preview'"
+        :title="muted ? t('transport.unmute') : t('transport.mute')"
         @click="emit('mute')"
       >
         <Icon :name="muted ? 'volume-x' : 'volume'" />
@@ -53,9 +54,9 @@ const step = (dir) => emit('seek', Math.min(props.duration, Math.max(0, props.ti
       <span class="tc-total">{{ timecode(duration) }}</span>
     </p>
     <p class="transport-meta">
-      <span>Frame {{ frameOf(time) }}</span>
+      <span>{{ t('transport.frame', { n: frameOf(time) }) }}</span>
       <span v-if="size">{{ size }}</span>
-      <span>{{ PREVIEW_FPS }} fps preview</span>
+      <span>{{ t('transport.fps', { fps: PREVIEW_FPS }) }}</span>
     </p>
   </div>
 </template>

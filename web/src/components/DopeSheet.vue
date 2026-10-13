@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { timecode, PREVIEW_FPS } from '../lib/timecode.js';
+import { t } from '../lib/i18n.js';
 
 const props = defineProps({
   duration: { type: Number, default: 1 },
@@ -69,9 +70,9 @@ function onKey(e) {
 </script>
 
 <template>
-  <section class="dope" aria-label="Animation timeline">
+  <section class="dope" :aria-label="t('dope.aria')">
     <div class="dope-grid">
-      <div class="dope-corner">Layer</div>
+      <div class="dope-corner">{{ t('dope.layer') }}</div>
       <div class="dope-ruler">
         <span
           v-for="tick in ticks"
@@ -96,15 +97,15 @@ function onKey(e) {
           />
         </div>
       </template>
-      <p v-if="!lanes.length" class="dope-empty">No tweens on the main timeline yet. Add them with tl.to / tl.fromTo.</p>
-      <p v-if="hiddenCount" class="dope-more">+{{ hiddenCount }} more layers</p>
+      <p v-if="!lanes.length" class="dope-empty">{{ t('dope.empty') }}</p>
+      <p v-if="hiddenCount" class="dope-more">{{ t('dope.more', { n: hiddenCount }) }}</p>
 
       <div
         ref="area"
         class="dope-hit"
         role="slider"
         tabindex="0"
-        aria-label="Playhead"
+        :aria-label="t('dope.playhead')"
         :aria-valuemin="0"
         :aria-valuemax="duration"
         :aria-valuenow="Number(time.toFixed(2))"

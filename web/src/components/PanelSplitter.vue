@@ -1,4 +1,6 @@
 <script setup>
+import { t } from '../lib/i18n.js';
+
 const props = defineProps({
   width: { type: Number, required: true },
   min: { type: Number, required: true },
@@ -52,7 +54,7 @@ function onKeydown(e) {
     :aria-valuenow="width"
     :aria-valuemin="min"
     :aria-valuemax="max"
-    :title="`${label}. Drag to resize, double-click to reset.`"
+    :title="t('splitter.title', { label })"
     @pointerdown="onPointerDown"
     @keydown="onKeydown"
     @dblclick="emit('reset')"

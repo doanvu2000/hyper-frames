@@ -41,6 +41,11 @@
   }
 }
 
+/* Geist has no Vietnamese glyphs; mixing it with a fallback per letter looks broken. */
+:root[lang='vi'] {
+  --font-ui: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --paper: #0e0f12;
@@ -1591,6 +1596,12 @@ code {
 }
 .job-origin {
   color: var(--signal);
+}
+
+.lang-btn {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 /* ---------- Start rail ---------- */

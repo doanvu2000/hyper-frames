@@ -1,4 +1,6 @@
 <script setup>
+import { t } from '../lib/i18n.js';
+
 const props = defineProps({
   field: { type: Object, required: true },
   value: { type: [String, Number], default: '' },
@@ -33,7 +35,7 @@ function onHex(e) {
       <input
         type="text"
         class="input input--mono"
-        :aria-label="`${field.label} hex value`"
+        :aria-label="t('field.hex', { label: field.label })"
         :value="value"
         maxlength="7"
         spellcheck="false"
@@ -69,6 +71,6 @@ function onHex(e) {
     />
 
     <p v-if="field.hint" class="field-hint">{{ field.hint }}</p>
-    <p v-else-if="field.id === 'duration'" class="field-hint">{{ field.min }} to {{ field.max }} seconds.</p>
+    <p v-else-if="field.id === 'duration'" class="field-hint">{{ t('field.seconds', { min: field.min, max: field.max }) }}</p>
   </div>
 </template>

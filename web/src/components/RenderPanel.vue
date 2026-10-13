@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, computed } from 'vue';
 import Icon from './Icon.vue';
+import { t } from '../lib/i18n.js';
 
 defineProps({
   disabled: { type: Boolean, default: false },
@@ -10,38 +11,39 @@ defineProps({
 const emit = defineEmits(['submit']);
 
 const FORMATS = [
-  { id: 'mp4', label: 'MP4', note: 'H.264, plays everywhere' },
-  { id: 'webm', label: 'WebM', note: 'VP9, keeps transparency' },
-  { id: 'mov', label: 'MOV', note: 'ProRes 4444 for editing apps' },
-  { id: 'gif', label: 'GIF', note: 'For docs and chats; 24 fps works best' },
+  { id: 'mp4', label: 'MP4' },
+  { id: 'webm', label: 'WebM' },
+  { id: 'mov', label: 'MOV' },
+  { id: 'gif', label: 'GIF' },
 ];
 const QUALITY = [
-  { id: 'draft', label: 'Draft', note: 'Fastest, for checking timing' },
-  { id: 'looks', label: 'Standard', note: 'Good for most uses' },
-  { id: 'delivery', label: 'Delivery', note: 'Highest quality, slowest' },
+  { id: 'draft' },
+  { id: 'looks' },
+  { id: 'delivery' },
 ];
 const settings = reactive({ format: 'mp4', fps: 30, quality: 'looks' });
 const pick = (list, id) => list.find((x) => x.id === id);
-const summary = computed(() => `${pick(FORMATS, settings.format).label} · ${settings.fps} fps · ${pick(QUALITY, settings.quality).label}`);
+const qualityLabel = (id) => t(`render.${id}`);
+const summary = computed(() => `${pick(FORMATS, settings.format).label} · ${settings.fps} fps · ${qualityLabel(settings.quality)}`);
 </script>
 
 <template>
-  <section class="render-bar" aria-label="Render">
+  <section class="render-bar" :aria-label="t('render.aria')">
     <details class="output">
       <summary class="output-summary">
-        <span class="output-label">Output</span>
+        <span class="output-label">{{ t('render.output') }}</span>
         <span class="output-value">{{ summary }}</span>
         <Icon name="chevron-right" :size="16" class="output-chevron" />
       </summary>
       <div class="output-grid">
         <div class="field">
-          <label class="field-label" for="render-format">Format</label>
+          <label class="field-label" for="render-format">{{ t('render.format') }}</label>
           <select id="render-format" v-model="settings.format" class="input">
             <option v-for="f in FORMATS" :key="f.id" :value="f.id">{{ f.label }}</option>
           </select>
         </div>
         <div class="field">
-          <label class="field-label" for="render-fps">Frame rate</label>
+          <label class="field-label" for="render-fps">{{ t('render.fps') }}</label>
           <select id="render-fps" v-model.number="settings.fps" class="input">
             <option :value="24">24 fps</option>
             <option :value="30">30 fps</option>
@@ -49,13 +51,13 @@ const summary = computed(() => `${pick(FORMATS, settings.format).label} · ${set
           </select>
         </div>
         <div class="field output-wide">
-          <label class="field-label" for="render-quality">Quality</label>
+          <label class="field-label" for="render-quality">{{ t('render.quality') }}</label>
           <select id="render-quality" v-model="settings.quality" class="input">
-            <option v-for="q in QUALITY" :key="q.id" :value="q.id">{{ q.label }}</option>
+            <option v-for="q in QUALITY" :key="q.id" :value="q.id">{{ qualityLabel(q.id) }}</option>
           </select>
         </div>
         <p class="field-hint output-wide">
-          {{ pick(FORMATS, settings.format).note }}. {{ pick(QUALITY, settings.quality).note }}.
+          {{ t(`render.${settings.format}`) }}. {{ t(`render.${settings.quality}Note`) }}.
         </p>
       </div>
     </details>
@@ -68,7 +70,7 @@ const summary = computed(() => `${pick(FORMATS, settings.format).label} · ${set
       @click="emit('submit', { ...settings })"
     >
       <Icon :name="submitting ? 'loader' : 'film'" :class="{ spin: submitting }" />
-      Render {{ pick(FORMATS, settings.format).label }}
+      {{ t('render.button', { format: pick(FORMATS, settings.format).label }) }}
     </button>
   </section>
 </template>

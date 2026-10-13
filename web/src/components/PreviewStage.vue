@@ -2,6 +2,7 @@
 import { ref, reactive, watch, onMounted, onBeforeUnmount } from 'vue';
 import { withPreviewShim, readComposition } from '../lib/previewShim.js';
 import Icon from './Icon.vue';
+import { t } from '../lib/i18n.js';
 
 const props = defineProps({
   html: { type: String, default: '' },
@@ -89,7 +90,7 @@ onBeforeUnmount(() => observer?.disconnect());
         class="stage-iframe"
         :class="{ 'is-front': i === front }"
         :srcdoc="doc"
-        :title="i === front ? 'Composition preview' : 'Next composition loading'"
+        :title="i === front ? t('preview.frame') : t('preview.loading')"
         :aria-hidden="i !== front"
         tabindex="-1"
         :style="{ width: `${size.w}px`, height: `${size.h}px`, transform: `scale(${scale})` }"
@@ -97,11 +98,11 @@ onBeforeUnmount(() => observer?.disconnect());
       />
     </div>
     <p v-if="busy" class="stage-busy" role="status">
-      <Icon name="loader" :size="14" class="spin" /> Updating preview
+      <Icon name="loader" :size="14" class="spin" /> {{ t('preview.updating') }}
     </p>
     <div v-if="error || scriptErrors.length" class="stage-alert" role="alert">
       <Icon name="alert" :size="16" />
-      <span>{{ error || `Script error in the composition: ${scriptErrors[0]}` }}</span>
+      <span>{{ error || t('preview.scriptError', { message: scriptErrors[0] }) }}</span>
     </div>
   </div>
 </template>

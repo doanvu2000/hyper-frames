@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 export async function api(path, { method = 'GET', body } = {}) {
   let res;
   try {
@@ -7,10 +9,10 @@ export async function api(path, { method = 'GET', body } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error('Cannot reach the render server. Start it with "npm run dev" and try again.');
+    throw new Error(t('api.unreachable'));
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? `Request failed with status ${res.status}.`);
+  if (!res.ok) throw new Error(data.error ?? t('api.failed', { status: res.status }));
   return data;
 }
 

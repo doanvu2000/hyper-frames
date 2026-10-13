@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { t } from './i18n.js';
 
 const SKIP = /(^|\/)(\.[^/]*|node_modules|__MACOSX|Thumbs\.db)(\/|$)/;
 const MAX_TOTAL = 1024 * 1024 * 1024;
@@ -43,13 +44,13 @@ function pickMainHtml(items) {
 export function planImport(items) {
   const usable = items.filter((i) => !SKIP.test(i.path));
   const main = pickMainHtml(usable);
-  if (!main) throw new Error('No .html file found. Import a HyperFrames composition (an .html file or a folder that contains one).');
+  if (!main) throw new Error(t('import.noHtml'));
   const baseDir = main.path.includes('/') ? main.path.slice(0, main.path.lastIndexOf('/') + 1) : '';
   const assets = usable
     .filter((i) => i !== main && i.path.startsWith(baseDir))
     .map((i) => ({ file: i.file, path: i.path.slice(baseDir.length) }));
   const total = assets.reduce((n, a) => n + a.file.size, 0);
-  if (total > MAX_TOTAL) throw new Error('These files add up to more than 1 GB. Import only what the composition uses.');
+  if (total > MAX_TOTAL) throw new Error(t('import.tooBig'));
   const label = baseDir ? baseDir.replace(/\/$/, '') : main.path;
   return { main, assets, total, label, skipped: usable.length - 1 - assets.length };
 }
@@ -67,7 +68,7 @@ export async function uploadImport(plan, onProgress) {
       const res = await fetch(url, { method: 'PUT', body: file });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Uploading ${path} failed.`);
+        throw new Error(data.error ?? t('import.uploadFailed', { path }));
       }
       done += file.size;
       onProgress?.(plan.total ? done / plan.total : 1);

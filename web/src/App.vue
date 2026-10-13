@@ -13,6 +13,7 @@ import ConnectionsMenu from './components/ConnectionsMenu.vue';
 import PanelSplitter from './components/PanelSplitter.vue';
 import FirstRunGuide from './components/FirstRunGuide.vue';
 import { PreviewAudio } from './lib/previewAudio.js';
+import { t, locale, setLocale } from './lib/i18n.js';
 
 // v2: template defaults changed (Geist font); older drafts would pin the old typeface.
 const DRAFT_KEY = 'hfs-draft-v2';
@@ -170,7 +171,7 @@ async function seedCustomHtml() {
 }
 
 async function loadTemplateIntoEditor() {
-  if (customHtml.value.trim() && !window.confirm('Replace the HTML in the editor with the current template?')) return;
+  if (customHtml.value.trim() && !window.confirm(t('app.replaceWithTemplate'))) return;
   try {
     const res = await api('/compose', { method: 'POST', body: { templateId: templateId.value, values: values.value, aspect: aspect.value } });
     customHtml.value = res.html;
@@ -184,7 +185,7 @@ function dropProject(id) {
 }
 
 function onImported(result) {
-  if (customHtml.value.trim() && customHtml.value !== result.html && !window.confirm('Replace the HTML in the editor with the imported file?')) {
+  if (customHtml.value.trim() && customHtml.value !== result.html && !window.confirm(t('app.replaceWithImport'))) {
     dropProject(result.projectId);
     return;
   }
@@ -193,7 +194,7 @@ function onImported(result) {
   assets.value = result.projectId ? { label: result.label, count: result.count, size: result.size } : null;
   customHtml.value = result.html;
   seek(POSTER_TIME);
-  toast(`Imported ${result.label}`);
+  toast(t('app.imported', { label: result.label }));
 }
 
 function clearAssets() {
@@ -207,7 +208,7 @@ function onGeneratedHtml(next) {
   seek(POSTER_TIME);
 }
 
-const sourceLabel = (id) => status.value?.connections.find((c) => c.id === id)?.label ?? 'An AI tool';
+const sourceLabel = (id) => status.value?.connections.find((c) => c.id === id)?.label ?? t('app.aiTool');
 
 // Sent by a CLI through MCP. No confirm dialog: nobody may be at the screen, so offer Undo instead.
 function onPushed(push) {
@@ -215,11 +216,11 @@ function onPushed(push) {
   mode.value = 'html';
   customHtml.value = push.html;
   projectId.value = push.projectId ?? '';
-  assets.value = push.projectId ? { label: push.name ?? `Files from ${sourceLabel(push.client)}`, count: push.assets?.count ?? 0, size: push.assets?.size ?? 0 } : null;
+  assets.value = push.projectId ? { label: push.name ?? t('app.filesFrom', { source: sourceLabel(push.client) }), count: push.assets?.count ?? 0, size: push.assets?.size ?? 0 } : null;
   sideTab.value = 'edit';
   seek(POSTER_TIME);
-  toast(`${sourceLabel(push.client)} opened ${push.name ? `"${push.name}"` : 'a composition'}`, {
-    label: 'Undo',
+  toast(push.name ? t('app.pushedNamed', { source: sourceLabel(push.client), name: push.name }) : t('app.pushed', { source: sourceLabel(push.client) }), {
+    label: t('app.undo'),
     run: () => {
       if (projectId.value && projectId.value !== before.projectId) dropProject(projectId.value);
       mode.value = before.mode;
@@ -348,7 +349,7 @@ async function submitRender(settings) {
         : { templateId: templateId.value, values: values.value, aspect: aspect.value, ...settings };
     const job = await api('/renders', { method: 'POST', body });
     upsert(job);
-    toast(`Rendering ${job.name}`, { label: 'View', run: () => (sideTab.value = 'renders') });
+    toast(t('app.rendering', { name: job.name }), { label: t('app.view'), run: () => (sideTab.value = 'renders') });
   } catch (err) {
     renderError.value = err.message;
   } finally {
@@ -362,8 +363,8 @@ function upsert(job) {
   if (i === -1) renders.value = [job, ...renders.value];
   else renders.value.splice(i, 1, job);
   if (before === job.status || (before !== 'running' && before !== 'queued')) return;
-  if (job.status === 'done') toast(`${job.name} is ready`, { label: 'Download', href: fileUrl(job) });
-  else if (job.status === 'failed') toast(`${job.name} failed to render`, { label: 'Details', run: () => (sideTab.value = 'renders') }, 'error');
+  if (job.status === 'done') toast(t('app.renderReady', { name: job.name }), { label: t('app.download'), href: fileUrl(job) });
+  else if (job.status === 'failed') toast(t('app.renderFailed', { name: job.name }), { label: t('app.details'), run: () => (sideTab.value = 'renders') }, 'error');
 }
 
 function toast(text, action, tone = 'info') {
@@ -459,7 +460,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <a class="skip-link" href="#stage">Skip to preview</a>
+  <a class="skip-link" href="#stage">{{ t('app.skip') }}</a>
   <div class="app">
     <header class="topbar">
       <div class="brand">
@@ -469,13 +470,28 @@ onBeforeUnmount(() => {
       <ConnectionsMenu :status="status" :renders="renders" @status="(s) => (status = s)" />
       <p v-if="health" class="health" :data-ok="Boolean(health.ffmpeg)">
         <span class="health-dot" aria-hidden="true" />
-        <span v-if="health.ffmpeg">Ready to render</span>
-        <span v-else>FFmpeg not found. Install it and restart the server to render.</span>
+        <span v-if="health.ffmpeg">{{ t('app.readyToRender') }}</span>
+        <span v-else>{{ t('app.noFfmpeg') }}</span>
       </p>
-      <button type="button" class="icon-btn" aria-label="Open the getting started guide" title="Getting started" @click="guideOpen = true">
+      <button
+        type="button"
+        class="icon-btn lang-btn"
+        :aria-label="t('app.language')"
+        :title="t('app.language')"
+        @click="setLocale(locale === 'vi' ? 'en' : 'vi')"
+      >
+        {{ locale.toUpperCase() }}
+      </button>
+      <button type="button" class="icon-btn" :aria-label="t('app.openGuide')" :title="t('app.guide')" @click="guideOpen = true">
         <Icon name="help" />
       </button>
-      <button type="button" class="icon-btn" :aria-label="`Theme: ${theme}. Change theme`" :title="`Theme: ${theme}`" @click="cycleTheme">
+      <button
+        type="button"
+        class="icon-btn"
+        :aria-label="t('app.theme', { theme: t(`theme.${theme}`) })"
+        :title="t('app.themeTitle', { theme: t(`theme.${theme}`) })"
+        @click="cycleTheme"
+      >
         <Icon :name="themeIcon[theme]" />
       </button>
     </header>
@@ -495,7 +511,7 @@ onBeforeUnmount(() => {
 
       <PanelSplitter
         class="ws-split ws-split--rail"
-        label="Resize the start panel"
+        :label="t('app.resizeRail')"
         edge="left"
         :width="layout.rail"
         :min="PANEL.rail.min"
@@ -505,7 +521,7 @@ onBeforeUnmount(() => {
       />
 
       <main id="stage" class="ws-stage" tabindex="-1">
-        <h1 class="visually-hidden">Preview</h1>
+        <h1 class="visually-hidden">{{ t('app.preview') }}</h1>
         <PreviewStage :html="html" :base="previewBase" :time="time" :busy="composing" :error="composeError" @ready="onReady" />
         <Transport
           :time="time"
@@ -523,7 +539,7 @@ onBeforeUnmount(() => {
 
       <PanelSplitter
         class="ws-split ws-split--side"
-        label="Resize the edit and render panel"
+        :label="t('app.resizeSide')"
         edge="right"
         :width="layout.side"
         :min="PANEL.side.min"
@@ -533,7 +549,7 @@ onBeforeUnmount(() => {
       />
 
       <aside class="ws-side">
-        <div class="tabs" role="tablist" aria-label="Side panel">
+        <div class="tabs" role="tablist" :aria-label="t('app.sidePanel')">
           <button
             id="tab-edit"
             type="button"
@@ -543,7 +559,7 @@ onBeforeUnmount(() => {
             aria-controls="panel-edit"
             @click="sideTab = 'edit'"
           >
-            Edit
+            {{ t('app.tabEdit') }}
           </button>
           <button
             id="tab-renders"
@@ -554,7 +570,7 @@ onBeforeUnmount(() => {
             aria-controls="panel-renders"
             @click="sideTab = 'renders'"
           >
-            Renders
+            {{ t('app.tabRenders') }}
             <span v-if="runningJob" class="tab-badge tab-badge--live">{{ Math.round(runningJob.progress) }}%</span>
             <span v-else-if="renders.length" class="tab-badge">{{ renders.length }}</span>
           </button>
@@ -605,12 +621,12 @@ onBeforeUnmount(() => {
   />
 
   <div class="toasts" aria-live="polite">
-    <div v-for="t in toasts" :key="t.id" class="toast" :data-tone="t.tone">
-      <Icon :name="t.tone === 'error' ? 'alert' : 'check'" :size="16" />
-      <span class="toast-text">{{ t.text }}</span>
-      <a v-if="t.action?.href" class="toast-action" :href="t.action.href" download @click="dismissToast(t.id)">{{ t.action.label }}</a>
-      <button v-else-if="t.action" type="button" class="toast-action" @click="t.action.run(), dismissToast(t.id)">{{ t.action.label }}</button>
-      <button type="button" class="toast-close" aria-label="Dismiss" @click="dismissToast(t.id)"><Icon name="x" :size="14" /></button>
+    <div v-for="note in toasts" :key="note.id" class="toast" :data-tone="note.tone">
+      <Icon :name="note.tone === 'error' ? 'alert' : 'check'" :size="16" />
+      <span class="toast-text">{{ note.text }}</span>
+      <a v-if="note.action?.href" class="toast-action" :href="note.action.href" download @click="dismissToast(note.id)">{{ note.action.label }}</a>
+      <button v-else-if="note.action" type="button" class="toast-action" @click="note.action.run(), dismissToast(note.id)">{{ note.action.label }}</button>
+      <button type="button" class="toast-close" :aria-label="t('app.dismiss')" @click="dismissToast(note.id)"><Icon name="x" :size="14" /></button>
     </div>
   </div>
 </template>

@@ -3,6 +3,7 @@ import { ref, computed, onBeforeUnmount } from 'vue';
 import Icon from './Icon.vue';
 import { api } from '../lib/api.js';
 import { connectionState } from '../lib/connections.js';
+import { t, tr } from '../lib/i18n.js';
 
 const props = defineProps({
   ai: { type: Object, default: null },
@@ -14,12 +15,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['generated', 'ai-updated']);
 
-const EXAMPLES = [
-  '5-second intro for a music app called Tempo: purple gradient, logo word bounces in, tagline "Every beat, offline".',
-  'Countdown 3, 2, 1 then "Launch day" in big bold type on black, yellow accents.',
-  'Three app features appear one by one with simple line icons, clean white background, blue accent.',
-];
-const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' };
+const examples = computed(() => [t('ai.example1'), t('ai.example2'), t('ai.example3')]);
 const SOURCE_LABEL = { api: 'API key', 'claude-cli': 'Claude CLI', 'codex-cli': 'Codex CLI' };
 const BUTTON_LABEL = { api: 'Claude API', 'claude-cli': 'Claude CLI', 'codex-cli': 'Codex CLI' };
 
@@ -44,23 +40,23 @@ const source = computed(() => connections.value.find((c) => c.id === provider.va
 const stateOf = (conn) => connectionState(conn, { generation: props.status?.generation, renders: props.renders });
 const sourceState = computed(() => {
   const state = stateOf(source.value);
-  return state.key === 'ready' ? { ...state, label: 'Ready' } : state;
+  return state.key === 'ready' ? { ...state, label: t('ai.ready') } : state;
 });
 
 const needsKey = computed(() => provider.value === 'api' && (!props.ai?.ready || editingKey.value));
 const cliBlocked = computed(() => provider.value !== 'api' && source.value?.checked && !source.value.available);
 const tail = computed(() => written.value.split('\n').slice(-5).join('\n'));
 const lineCount = computed(() => (written.value ? written.value.split('\n').length : 0));
-const label = computed(() => source.value?.label ?? 'the model');
+const label = computed(() => source.value?.label ?? t('ai.theModel'));
 const progressText = computed(() => {
-  if (phase.value === 'calling') return `Calling ${label.value}… ${elapsed.value}s`;
-  if (written.value) return `${label.value} is writing · line ${lineCount.value}`;
-  return `${label.value} is running… ${elapsed.value}s`;
+  if (phase.value === 'calling') return t('ai.calling', { label: label.value, s: elapsed.value });
+  if (written.value) return t('ai.writing', { label: label.value, n: lineCount.value });
+  return t('ai.running', { label: label.value, s: elapsed.value });
 });
 const modelHint = computed(() => {
-  if (provider.value === 'api') return `Uses ${props.ai?.model} with your API key.`;
-  if (provider.value === 'claude-cli') return 'Uses your Claude sign-in through Claude CLI, no API key needed.';
-  return 'Uses your ChatGPT sign-in through Codex CLI, no API key needed. Codex sends the whole result at the end.';
+  if (provider.value === 'api') return t('ai.hintApi', { model: props.ai?.model });
+  if (provider.value === 'claude-cli') return t('ai.hintClaude');
+  return t('ai.hintCodex');
 });
 
 async function pickSource(id) {
@@ -114,7 +110,7 @@ async function generate() {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error ?? `Generation failed with status ${res.status}.`);
+      throw new Error(data.error ?? t('ai.failed', { status: res.status }));
     }
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = '';
@@ -153,12 +149,12 @@ onBeforeUnmount(() => clearInterval(ticker));
 <template>
   <div class="group ai">
     <div class="ai-head">
-      <h3 class="group-title"><Icon name="sparkles" :size="14" /> Generate with AI</h3>
-      <button v-if="provider === 'api' && ai?.ready && !editingKey" type="button" class="ghost-btn" @click="editingKey = true">API key</button>
+      <h3 class="group-title"><Icon name="sparkles" :size="14" /> {{ t('ai.title') }}</h3>
+      <button v-if="provider === 'api' && ai?.ready && !editingKey" type="button" class="ghost-btn" @click="editingKey = true">{{ t('ai.apiKey') }}</button>
     </div>
 
     <div class="field">
-      <span id="ai-source-label" class="field-label">Model source</span>
+      <span id="ai-source-label" class="field-label">{{ t('ai.source') }}</span>
       <div class="segmented" role="radiogroup" aria-labelledby="ai-source-label">
         <button
           v-for="conn in connections"
@@ -184,73 +180,72 @@ onBeforeUnmount(() => clearInterval(ticker));
     </div>
 
     <form v-if="needsKey" class="ai-key" @submit.prevent="saveKey">
-      <label class="field-label" for="ai-key">Anthropic API key</label>
+      <label class="field-label" for="ai-key">{{ t('ai.keyLabel') }}</label>
       <p class="field-hint">
-        Saved only on this computer in <code>server/data/config.json</code>. Get one at
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>,
-        or pick Claude CLI or Codex CLI above to use your subscription instead.
+        <span v-html="tr('ai.keyHintA')" />
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>{{ t('ai.keyHintB') }}
       </p>
       <div class="ai-key-row">
         <input id="ai-key" v-model="keyInput" type="password" class="input input--mono" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
-        <button type="submit" class="text-btn" :disabled="savingKey || (!keyInput && !ai?.ready)">{{ keyInput || !ai?.ready ? 'Save' : 'Remove' }}</button>
+        <button type="submit" class="text-btn" :disabled="savingKey || (!keyInput && !ai?.ready)">{{ keyInput || !ai?.ready ? t('ai.save') : t('ai.remove') }}</button>
       </div>
-      <p v-if="ai?.keySource === 'env'" class="field-hint">A key from ANTHROPIC_API_KEY is in use and takes priority.</p>
-      <button v-if="editingKey" type="button" class="ghost-btn" @click="editingKey = false">Cancel</button>
+      <p v-if="ai?.keySource === 'env'" class="field-hint">{{ t('ai.envKey') }}</p>
+      <button v-if="editingKey" type="button" class="ghost-btn" @click="editingKey = false">{{ t('ai.cancel') }}</button>
     </form>
 
     <p v-else-if="cliBlocked" class="ai-blocked">
       <Icon name="terminal" :size="14" />
       <span v-if="!source.installed">{{ source.detail }}</span>
-      <span v-else>Sign in from a terminal with <code>{{ source.login }}</code>, then press Check again under AI connections.</span>
+      <span v-else v-html="tr('ai.signIn', { cmd: source.login })" />
     </p>
 
     <template v-else>
       <div class="field">
-        <label class="field-label" for="ai-prompt">Describe the video</label>
+        <label class="field-label" for="ai-prompt">{{ t('ai.describe') }}</label>
         <textarea
           id="ai-prompt"
           v-model="prompt"
           class="input input--area"
           rows="4"
           maxlength="4000"
-          placeholder="What it says, the mood, colors, and how things should move."
+          :placeholder="t('ai.placeholder')"
           :disabled="streaming"
           @keydown.ctrl.enter="prompt.trim() && !streaming && generate()"
           @keydown.meta.enter="prompt.trim() && !streaming && generate()"
         />
       </div>
       <div v-if="!prompt" class="ai-examples">
-        <button v-for="ex in EXAMPLES" :key="ex" type="button" class="ai-example" @click="prompt = ex">{{ ex }}</button>
+        <button v-for="ex in examples" :key="ex" type="button" class="ai-example" @click="prompt = ex">{{ ex }}</button>
       </div>
 
       <div class="ai-options">
         <div class="field">
-          <label class="field-label" for="ai-aspect">Frame</label>
+          <label class="field-label" for="ai-aspect">{{ t('ai.frame') }}</label>
           <select id="ai-aspect" v-model="aspect" class="input" :disabled="revise || streaming">
-            <option v-for="a in aspects" :key="a.id" :value="a.id">{{ aspectLabel[a.id] ?? a.id }} · {{ a.width }}×{{ a.height }}</option>
+            <option v-for="a in aspects" :key="a.id" :value="a.id">{{ t(`aspect.${a.id}`) }} · {{ a.width }}×{{ a.height }}</option>
           </select>
         </div>
         <div class="field">
-          <label class="field-label" for="ai-length">Length (s)</label>
+          <label class="field-label" for="ai-length">{{ t('ai.length') }}</label>
           <input id="ai-length" v-model.number="duration" type="number" min="2" max="60" step="1" class="input input--mono" :disabled="revise || streaming" />
         </div>
       </div>
       <label v-if="currentHtml.trim()" class="check">
         <input v-model="revise" type="checkbox" :disabled="streaming" />
-        <span>Revise the HTML below instead of starting over</span>
+        <span>{{ t('ai.revise') }}</span>
       </label>
 
       <button v-if="!streaming" type="button" class="secondary-btn" :disabled="!prompt.trim() || Boolean(status?.generation)" @click="generate">
-        <Icon name="sparkles" :size="16" /> {{ revise ? 'Revise' : 'Generate' }} with {{ BUTTON_LABEL[provider] }}
+        <Icon name="sparkles" :size="16" /> {{ t(revise ? 'ai.reviseWith' : 'ai.generateWith', { source: BUTTON_LABEL[provider] }) }}
       </button>
       <button v-else type="button" class="secondary-btn" @click="stop">
-        <Icon name="stop" :size="14" /> Stop
+        <Icon name="stop" :size="14" /> {{ t('ai.stop') }}
       </button>
       <p v-if="streaming" class="ai-progress" role="status">
         <span class="state-dot" :data-state="phase === 'calling' ? 'calling' : 'running'" aria-hidden="true" />{{ progressText }}
       </p>
       <pre v-if="streaming && written" class="ai-tail" aria-hidden="true">{{ tail }}</pre>
-      <p class="field-hint">{{ modelHint }} Usually takes 10–60 seconds. The result replaces the HTML below and stays editable.</p>
+      <p class="field-hint">{{ modelHint }} {{ t('ai.hintTail') }}</p>
     </template>
 
     <p v-if="error" class="field-error" role="alert"><Icon name="alert" :size="14" /> {{ error }}</p>

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import Icon from './Icon.vue';
 import { filesFromInput, filesFromDrop, planImport, uploadImport } from '../lib/importFiles.js';
 import { formatBytes } from '../lib/timecode.js';
+import { t } from '../lib/i18n.js';
 
 defineProps({ assets: { type: Object, default: null } });
 const emit = defineEmits(['imported', 'clear-assets']);
@@ -39,7 +40,7 @@ function onPick(e) {
 
 <template>
   <div class="group">
-    <h3 class="group-title">Import</h3>
+    <h3 class="group-title">{{ t('import.title') }}</h3>
     <div
       class="dropzone"
       :class="{ 'is-over': over, 'is-busy': progress !== null }"
@@ -49,16 +50,16 @@ function onPick(e) {
     >
       <template v-if="progress === null">
         <Icon name="upload" :size="20" />
-        <p>Drop an .html file or its folder here</p>
+        <p>{{ t('import.drop') }}</p>
         <div class="dropzone-actions">
-          <button type="button" class="text-btn" @click="fileInput.click()">Choose file</button>
-          <button type="button" class="text-btn" @click="folderInput.click()">Choose folder</button>
+          <button type="button" class="text-btn" @click="fileInput.click()">{{ t('import.file') }}</button>
+          <button type="button" class="text-btn" @click="folderInput.click()">{{ t('import.folder') }}</button>
         </div>
-        <p class="field-hint">Import the folder when the HTML uses local images, video, audio or fonts.</p>
+        <p class="field-hint">{{ t('import.hint') }}</p>
       </template>
       <template v-else>
-        <p>Uploading assets · {{ Math.round(progress * 100) }}%</p>
-        <div class="progress" role="progressbar" :aria-valuenow="Math.round(progress * 100)" aria-valuemin="0" aria-valuemax="100" aria-label="Import progress">
+        <p>{{ t('import.uploading', { p: Math.round(progress * 100) }) }}</p>
+        <div class="progress" role="progressbar" :aria-valuenow="Math.round(progress * 100)" aria-valuemin="0" aria-valuemax="100" :aria-label="t('import.progress')">
           <span class="progress-fill" :style="{ transform: `scaleX(${progress})` }" />
         </div>
       </template>
@@ -70,9 +71,9 @@ function onPick(e) {
       <Icon name="layers" :size="15" />
       <span class="asset-chip-text">
         <strong>{{ assets.label }}</strong>
-        <span>{{ assets.count }} asset{{ assets.count === 1 ? '' : 's' }} · {{ formatBytes(assets.size) }}</span>
+        <span>{{ t(assets.count === 1 ? 'import.assetOne' : 'import.assetMany', { n: assets.count }) }} · {{ formatBytes(assets.size) }}</span>
       </span>
-      <button type="button" class="ghost-btn" @click="emit('clear-assets')">Remove</button>
+      <button type="button" class="ghost-btn" @click="emit('clear-assets')">{{ t('import.remove') }}</button>
     </div>
   </div>
 </template>
