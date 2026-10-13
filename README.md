@@ -1,77 +1,78 @@
 # HyperFrames Studio
 
-A local app for making short motion videos with [HyperFrames](https://github.com/heygen-com/hyperframes).
-Describe a video and let Claude or Codex write it, or import your own HTML and art. Scrub the live preview with
-sound, then render MP4, WebM, MOV or GIF on your own machine.
+[English](README.en.md)
 
-Runs on **Windows** and **macOS** (Linux works from a terminal).
+Ứng dụng chạy trên máy để làm video motion ngắn bằng [HyperFrames](https://github.com/heygen-com/hyperframes).
+Mô tả video để Claude hoặc Codex viết, hoặc import HTML và art của bạn. Xem preview có tiếng, kéo thanh thời gian, rồi
+render MP4, WebM, MOV hoặc GIF ngay trên máy.
 
-## Requirements
+Chạy trên **Windows** và **macOS** (Linux chạy được từ terminal).
+
+## Cần cài
 
 | | Windows | macOS |
 |---|---|---|
-| Node.js 22 or newer | [nodejs.org](https://nodejs.org) installer | [nodejs.org](https://nodejs.org) or `brew install node` |
-| FFmpeg on `PATH` | `winget install Gyan.FFmpeg` | `brew install ffmpeg` |
-| An AI to write videos (optional) | Claude CLI or Codex CLI, or an Anthropic API key | same |
+| Node.js 22 trở lên | Bộ cài từ [nodejs.org](https://nodejs.org) | [nodejs.org](https://nodejs.org) hoặc `brew install node` |
+| FFmpeg trong `PATH` | `winget install Gyan.FFmpeg` | `brew install ffmpeg` |
+| AI để viết video (tùy chọn) | Claude CLI hoặc Codex CLI, hoặc Anthropic API key | như Windows |
 
-The first render needs network access: HyperFrames downloads its headless Chrome, and compositions load GSAP and
-Google Fonts from CDNs.
+Lần render đầu cần mạng: HyperFrames tải Chrome headless, và composition tải GSAP, Google Fonts từ CDN.
 
-## Start the Studio
+## Mở Studio
 
 **Windows:** double-click **`HyperFrames Studio.cmd`**.
 
-**macOS:** double-click **`HyperFrames Studio.command`**. The first time, macOS may block it: right-click the file,
-choose **Open**, then **Open** again. If it says the file is not executable, run once in Terminal:
+**macOS:** double-click **`HyperFrames Studio.command`**. Lần đầu macOS có thể chặn: chuột phải vào file, chọn
+**Open**, rồi bấm **Open** lần nữa. Nếu báo file không chạy được, mở Terminal chạy một lần:
 
 ```bash
 chmod +x "HyperFrames Studio.command"
 ```
 
-The first run installs dependencies and builds the interface (about a minute). Later runs start in a few seconds and
-open http://127.0.0.1:8787 in your browser. Keep the console or Terminal window open while you work; close it to stop
-the Studio. Opening the launcher again after an update restarts the Studio with the new code.
+Lần đầu sẽ cài thư viện và build giao diện (khoảng 1 phút). Các lần sau mở trong vài giây và tự mở
+http://127.0.0.1:8787 trên trình duyệt. Giữ cửa sổ console/Terminal mở khi làm việc, đóng nó là tắt Studio. Sau khi
+cập nhật code, mở lại launcher là Studio tự khởi động lại với bản mới.
 
-From a terminal instead:
+Hoặc chạy từ terminal:
 
 ```bash
 npm install
-npm run dev        # API on http://127.0.0.1:8787, UI with hot reload on http://localhost:5173
+npm run dev        # API ở http://127.0.0.1:8787, giao diện hot reload ở http://localhost:5173
 ```
 
-Production-style: `npm run build && npm start`, then open http://127.0.0.1:8787.
+Kiểu production: `npm run build && npm start`, rồi mở http://127.0.0.1:8787.
 
-## First run: connect Claude or Codex
+## Lần đầu: kết nối Claude hoặc Codex
 
-The Studio opens a short **Getting started** guide on the first visit (reopen it with the **?** button in the top
-bar). It shows whether each CLI is installed and signed in, with the commands to copy.
+Lần đầu vào, Studio hiện bảng **Getting started** (mở lại bằng nút **?** trên thanh trên cùng). Bảng này cho biết
+từng CLI đã cài và đã đăng nhập chưa, kèm lệnh để copy.
 
-You only need one of them:
+Chỉ cần một trong hai:
 
-| | Install | Sign in |
+| | Cài | Đăng nhập |
 |---|---|---|
-| Claude CLI (Claude Pro / Max / Team) | `npm install -g @anthropic-ai/claude-code` | `claude auth login` |
-| Codex CLI (ChatGPT plan) | `npm install -g @openai/codex` | `codex login` |
+| Claude CLI (gói Claude Pro / Max / Team) | `npm install -g @anthropic-ai/claude-code` | `claude auth login` |
+| Codex CLI (gói ChatGPT) | `npm install -g @openai/codex` | `codex login` |
 
-After installing or signing in, press **Check again** in the guide or under **AI connections**.
+Cài hoặc đăng nhập xong, bấm **Check again** trong bảng hướng dẫn hoặc trong menu **AI connections**.
 
-No subscription? Pick **API key** under Model source and paste an Anthropic API key. It is saved only in
-`server/data/config.json` and never sent to the browser. `ANTHROPIC_API_KEY` in the environment also works.
+Không có gói nào? Chọn **API key** ở mục Model source và dán Anthropic API key. Key chỉ lưu trên máy ở
+`server/data/config.json`, không gửi lên trình duyệt. Đặt biến môi trường `ANTHROPIC_API_KEY` cũng được.
 
-## Make a video in the Studio
+## Làm video trong Studio
 
-1. Click **AI & custom HTML** at the top of the left panel.
-2. Under **Model source**, choose **Claude CLI** or **Codex CLI**.
-3. Describe the video: what it says, mood, colors and how things move. Pick the frame (Landscape, Portrait, Square)
-   and the length in seconds.
-4. Press **Generate**. It usually takes 10–60 seconds; Claude streams its progress, Codex sends the result at the end.
-5. Check the preview. Press Play to hear the audio; the speaker button mutes it.
-6. Edit the HTML below if you like, or tick **Revise** and describe a change.
-7. Choose the output under **Render** on the right and press **Render MP4**. Finished files are in the **Renders** tab.
+1. Bấm **AI & custom HTML** ở đầu panel trái.
+2. Ở **Model source**, chọn **Claude CLI** hoặc **Codex CLI**.
+3. Mô tả video: nội dung chữ, không khí, màu sắc, chuyển động. Chọn khung hình (Landscape ngang, Portrait dọc, Square
+   vuông) và độ dài (giây).
+4. Bấm **Generate**. Thường mất 10–60 giây; Claude hiện tiến trình khi đang viết, Codex trả kết quả một lần ở cuối.
+5. Xem preview. Bấm Play để nghe tiếng; nút loa để tắt/bật tiếng.
+6. Sửa HTML bên dưới nếu muốn, hoặc tick **Revise** rồi mô tả chỗ cần đổi.
+7. Chọn định dạng ở phần **Render** bên phải và bấm **Render MP4**. File xong nằm trong tab **Renders**.
 
-### Use your own art and sound
+### Dùng art và âm thanh riêng
 
-Prepare a folder with an `index.html` (a placeholder is fine) and your files, for example:
+Chuẩn bị một folder có `index.html` (file tạm cũng được) và các file của bạn, ví dụ:
 
 ```
 my-promo/
@@ -82,67 +83,67 @@ my-promo/
   fonts/Brand.ttf
 ```
 
-Drop the folder on **Import**, then press Generate. The AI is given the list of files and uses them by path. Mention
-the important ones in your prompt (“logo from img/logo.png, music/bgm.ogg at volume 0.4”). Audio uses
-`<audio id src data-start data-duration data-track-index data-volume>`; overlapping sounds need different track
-indexes.
+Kéo thả folder vào ô **Import**, rồi bấm Generate. AI được báo danh sách file và dùng đúng đường dẫn. Nêu rõ các file
+quan trọng trong prompt (“logo lấy từ img/logo.png, music/bgm.ogg âm lượng 0.4”). Âm thanh dùng thẻ
+`<audio id src data-start data-duration data-track-index data-volume>`; các tiếng phát chồng nhau phải khác
+`data-track-index`.
 
-### Templates
+### Template
 
-A few ready-made templates (title card, stat count-up and others) sit under **Templates** in the left panel, folded
-by default. Pick one to edit its fields directly, or use **Start from template** in the custom HTML editor as a base.
+Một số template có sẵn (title card, số đếm, …) nằm trong mục **Templates** ở panel trái, mặc định gập lại. Chọn một
+template để sửa trực tiếp các trường, hoặc bấm **Start from template** trong trình sửa HTML để lấy làm nền.
 
-## Drive the Studio from a terminal (MCP)
+## Điều khiển Studio từ terminal (MCP)
 
-The Studio is also an MCP server, so a `claude` or `codex` session in any folder can make videos with it.
+Studio cũng là một MCP server, nên phiên `claude` hoặc `codex` ở bất kỳ folder nào cũng làm video được qua nó.
 
-1. Open **AI connections** in the top bar (or step 3 of the guide) and press **Add to Claude Code** or **Add to Codex**.
-   By hand:
+1. Mở **AI connections** trên thanh trên cùng (hoặc bước 3 của bảng hướng dẫn) và bấm **Add to Claude Code** hoặc
+   **Add to Codex**. Thêm bằng tay:
    ```bash
    claude mcp add --scope user --transport http hyperframes-studio "http://127.0.0.1:8787/mcp?client=claude-cli"
    codex mcp add hyperframes-studio --url "http://127.0.0.1:8787/mcp?client=codex-cli"
    ```
-2. Start a **new** CLI session and ask, for example:
+2. Mở một phiên CLI **mới** và yêu cầu, ví dụ:
    > Use HyperFrames Studio to make a 6-second intro for my app, show it in the Studio, then render an MP4.
 
-The CLI can read the authoring guide, fill templates, look at frames, run checks, open the result in the Studio
-(with an Undo toast) and render it. The connections menu shows each one's state: Not connected, Ready to connect,
-Connected, Calling, Running, and Rendering with progress. Keep the Studio open while a CLI uses it.
+CLI có thể đọc hướng dẫn viết composition, điền template, xem từng frame, chạy kiểm tra, mở kết quả trong Studio (có
+toast Undo) và render. Menu AI connections hiện trạng thái từng kết nối: Not connected, Ready to connect, Connected,
+Calling, Running, và Rendering kèm tiến độ. Giữ Studio mở trong lúc CLI đang dùng. Phiên CLI đã mở từ trước cần khởi
+động lại mới thấy Studio.
 
-## Layout
+## Bố cục
 
-On wide screens, drag the thin handles between the panels to resize the left panel and the Edit/Render panel.
-Double-click a handle to reset it; with the keyboard, focus it and use the arrow keys. Sizes are remembered.
+Trên màn rộng (từ 1280px), kéo thanh mảnh giữa các panel để đổi độ rộng panel trái và panel Edit/Render. Double-click
+thanh kéo để về mặc định; dùng bàn phím thì focus vào thanh rồi bấm mũi tên. Độ rộng được nhớ cho lần sau.
 
-## Troubleshooting
+## Xử lý lỗi thường gặp
 
-- **“FFmpeg not found”** — install FFmpeg (see Requirements), then reopen the launcher.
-- **CLI shows Not installed / Not signed in** — run the install or sign-in command in a terminal, then press Check again.
-  On macOS, if the CLI is installed but not found, open the Studio from the `.command` file (it loads Homebrew and nvm
-  paths) or start it from a Terminal where `claude --version` works.
-- **“An older version of the studio is still running”** — close the old console/Terminal window (or end `node` in
-  Task Manager / Activity Monitor), then open the launcher again.
-- **Download managers (IDM)** — the Studio avoids triggering them: downloads end in the real file name, and preview
-  audio is fetched instead of loaded by media elements.
+- **“FFmpeg not found”**: cài FFmpeg (xem mục Cần cài), rồi mở lại launcher.
+- **CLI báo Not installed / Not signed in**: chạy lệnh cài hoặc đăng nhập trong terminal, rồi bấm Check again. Trên
+  macOS nếu CLI đã cài mà Studio không thấy, hãy mở Studio bằng file `.command` (file này nạp đường dẫn Homebrew và
+  nvm) hoặc chạy từ Terminal nơi `claude --version` hoạt động.
+- **“An older version of the studio is still running”**: đóng cửa sổ console/Terminal cũ (hoặc tắt `node` trong Task
+  Manager / Activity Monitor), rồi mở lại launcher.
+- **Trình tải (IDM)**: Studio tránh để IDM bắt nhầm. Link tải kết thúc bằng tên file thật, và âm thanh preview được
+  tải bằng fetch thay vì thẻ media.
 
-## How it works
+## Cách hoạt động
 
-- `server/` (Express) builds composition HTML from templates in `server/src/templates`, and renders it by spawning the
-  pinned `hyperframes` CLI. Progress comes from the CLI's `@hf-progress` lines and streams to the UI over SSE.
-  Renders run one at a time and are kept in `server/data/renders/<id>/`. Imports live in `server/data/projects/<id>/`
-  and are copied next to the HTML for each render.
-- `web/` (Vue 3 + Vite) previews the same HTML in an iframe. A small shim seeks `window.__timelines` and hides timed
-  elements outside their `data-start`/`data-duration` window, mirroring what the HyperFrames runtime does. The dope
-  sheet under the preview is read from the live GSAP timeline. `<audio>` clips are played with Web Audio in the app
-  window, in sync with the playhead.
-- The CLIs run without tools in an empty temp folder. Override models with `HF_MODEL` (API), `HF_CLAUDE_MODEL` and
+- `server/` (Express) dựng HTML composition từ template trong `server/src/templates` và render bằng cách gọi CLI
+  `hyperframes` (phiên bản cố định). Tiến độ đọc từ dòng `@hf-progress` của CLI và đẩy lên giao diện qua SSE. Mỗi lần
+  render một video, kết quả lưu ở `server/data/renders/<id>/`. File import nằm ở `server/data/projects/<id>/` và được
+  chép cạnh HTML mỗi lần render.
+- `web/` (Vue 3 + Vite) preview cùng HTML đó trong iframe. Một shim nhỏ tua `window.__timelines` và ẩn phần tử nằm
+  ngoài khoảng `data-start`/`data-duration`, giống runtime của HyperFrames. Dope sheet dưới preview đọc từ timeline
+  GSAP đang chạy. Thẻ `<audio>` được phát bằng Web Audio trong cửa sổ app, khớp với đầu phát.
+- CLI chạy không có tool, trong một folder tạm trống. Đổi model bằng `HF_MODEL` (API), `HF_CLAUDE_MODEL` và
   `HF_CODEX_MODEL`.
-- The server binds to `127.0.0.1` because it renders whatever HTML it is sent; set `HOST` only on a trusted network.
-  It is a local app by design: rendering needs headless Chrome, FFmpeg and your signed-in CLIs, so it does not run on
-  serverless hosts such as Cloudflare Workers.
+- Server chỉ nghe `127.0.0.1` vì nó render mọi HTML được gửi tới; chỉ đặt `HOST` khi ở mạng tin cậy. Đây là app chạy
+  trên máy theo thiết kế: render cần Chrome headless, FFmpeg và CLI đã đăng nhập, nên không chạy trên serverless như
+  Cloudflare Workers.
 
-## Adding a template
+## Thêm template
 
-Create `server/src/templates/<name>.js` exporting `{ id, name, summary, duration, fields, build(values, ctx) }`
-and register it in `server/src/templates/index.js`. `build` returns `{ css, body, timeline }`; the timeline code
-adds tweens to the paused `tl`. Keep it deterministic — no `Math.random()`, `Date.now()` or fetches.
+Tạo `server/src/templates/<name>.js` export `{ id, name, summary, duration, fields, build(values, ctx) }` và đăng ký
+trong `server/src/templates/index.js`. `build` trả về `{ css, body, timeline }`; code timeline thêm tween vào `tl` đang
+paused. Giữ tính xác định: không dùng `Math.random()`, `Date.now()` hay fetch.
