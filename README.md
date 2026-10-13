@@ -8,6 +8,21 @@ render MP4, WebM, MOV hoặc GIF ngay trên máy.
 
 Chạy trên **Windows** và **macOS** (Linux chạy được từ terminal).
 
+![HyperFrames Studio](docs/screenshots/studio-dark.png)
+
+<table>
+<tr>
+<td><img src="docs/screenshots/studio-light.png" alt="Giao diện sáng"></td>
+<td><img src="docs/screenshots/templates.png" alt="Chọn template"></td>
+<td><img src="docs/screenshots/renders.png" alt="Danh sách bản render"></td>
+</tr>
+<tr>
+<td align="center">Giao diện sáng</td>
+<td align="center">Chọn template</td>
+<td align="center">Bản render</td>
+</tr>
+</table>
+
 ## Cần cài
 
 | | Windows | macOS |

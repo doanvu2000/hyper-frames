@@ -6,6 +6,21 @@ sound, then render MP4, WebM, MOV or GIF on your own machine.
 
 Runs on **Windows** and **macOS** (Linux works from a terminal).
 
+![HyperFrames Studio](docs/screenshots/studio-dark.png)
+
+<table>
+<tr>
+<td><img src="docs/screenshots/studio-light.png" alt="Light theme"></td>
+<td><img src="docs/screenshots/templates.png" alt="Template picker"></td>
+<td><img src="docs/screenshots/renders.png" alt="Render list"></td>
+</tr>
+<tr>
+<td align="center">Light theme</td>
+<td align="center">Templates</td>
+<td align="center">Renders</td>
+</tr>
+</table>
+
 ## Requirements
 
 | | Windows | macOS |
