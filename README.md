@@ -34,6 +34,17 @@ Production-style: `npm run build && npm start`, then open http://127.0.0.1:8787.
 - **Custom HTML** mode accepts any HyperFrames composition. The server binds to `127.0.0.1` by default because
   it renders whatever HTML it is sent; set `HOST` only on a trusted network.
 
+## AI and custom HTML
+
+Open **AI & custom HTML** in the template list.
+
+- **Generate with AI** — describe the video; Claude writes a HyperFrames composition that lands in the editor, ready to
+  preview, tweak and render. Tick "Revise" to change the current HTML instead of starting over. Needs an Anthropic
+  API key: paste it in the panel (saved to `server/data/config.json`, never sent to the browser) or set
+  `ANTHROPIC_API_KEY`. The model defaults to `claude-opus-5-5`; override with `HF_MODEL`.
+- **Import** — drop an `.html` file, or the folder it lives in when it uses local images, video, audio or fonts.
+  Assets are stored per import in `server/data/projects/<id>/` and copied next to the HTML for each render.
+
 ## Adding a template
 
 Create `server/src/templates/<name>.js` exporting `{ id, name, summary, duration, fields, build(values, ctx) }`

@@ -8,6 +8,7 @@ const props = defineProps({
   time: { type: Number, default: 0 },
   busy: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  base: { type: String, default: '' },
 });
 const emit = defineEmits(['ready']);
 
@@ -23,13 +24,13 @@ const tokens = [0, 0];
 let rev = 0;
 
 watch(
-  () => props.html,
-  (html) => {
+  () => [props.html, props.base],
+  ([html, base]) => {
     if (!html) return;
     const target = docs[front.value] ? 1 - front.value : front.value;
     rev += 1;
     tokens[target] = rev;
-    docs[target] = withPreviewShim(html, rev);
+    docs[target] = withPreviewShim(html, rev, base);
   },
   { immediate: true },
 );

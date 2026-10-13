@@ -23,6 +23,8 @@ const templateId = ref('title-card');
 const aspect = ref('16:9');
 const valuesByTemplate = reactive({});
 const customHtml = ref('');
+const projectId = ref('');
+const assets = ref(null);
 
 const html = ref('');
 const composing = ref(false);
@@ -46,6 +48,7 @@ const template = computed(() => catalog.templates.find((t) => t.id === templateI
 const values = computed(() => valuesByTemplate[templateId.value] ?? {});
 const runningJob = computed(() => renders.value.find((r) => r.status === 'running'));
 const sizeLabel = computed(() => `${info.width}×${info.height}`);
+const previewBase = computed(() => (mode.value === 'html' && projectId.value ? `/api/projects/${projectId.value}/files/` : ''));
 
 function defaultsFor(t) {
   return Object.fromEntries(t.fields.map((f) => [f.id, f.default]));
@@ -59,6 +62,15 @@ function restoreDraft() {
     if (catalog.aspects.some((a) => a.id === draft.aspect)) aspect.value = draft.aspect;
     if (draft.mode === 'html' || draft.mode === 'template') mode.value = draft.mode;
     if (typeof draft.customHtml === 'string') customHtml.value = draft.customHtml;
+    if (draft.projectId) {
+      projectId.value = draft.projectId;
+      assets.value = draft.assets ?? null;
+      // Imports can be deleted on disk between visits; drop the link instead of rendering with missing files.
+      api(`/projects/${draft.projectId}`).catch(() => {
+        projectId.value = '';
+        assets.value = null;
+      });
+    }
     for (const t of catalog.templates) {
       if (draft.values?.[t.id]) Object.assign(valuesByTemplate[t.id], draft.values[t.id]);
     }
@@ -69,14 +81,22 @@ function restoreDraft() {
 
 let saveTimer;
 watch(
-  [mode, templateId, aspect, customHtml, () => JSON.stringify(valuesByTemplate)],
+  [mode, templateId, aspect, customHtml, projectId, () => JSON.stringify(valuesByTemplate)],
   () => {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
         localStorage.setItem(
           DRAFT_KEY,
-          JSON.stringify({ mode: mode.value, templateId: templateId.value, aspect: aspect.value, customHtml: customHtml.value, values: valuesByTemplate }),
+          JSON.stringify({
+            mode: mode.value,
+            templateId: templateId.value,
+            aspect: aspect.value,
+            customHtml: customHtml.value,
+            projectId: projectId.value,
+            assets: assets.value,
+            values: valuesByTemplate,
+          }),
         );
       } catch {
         // Storage can be unavailable (private window); the draft is a convenience only.
@@ -137,6 +157,34 @@ async function loadTemplateIntoEditor() {
   }
 }
 
+function dropProject(id) {
+  if (id) api(`/projects/${id}`, { method: 'DELETE' }).catch(() => {});
+}
+
+function onImported(result) {
+  if (customHtml.value.trim() && customHtml.value !== result.html && !window.confirm('Replace the HTML in the editor with the imported file?')) {
+    dropProject(result.projectId);
+    return;
+  }
+  if (projectId.value !== result.projectId) dropProject(projectId.value);
+  projectId.value = result.projectId ?? '';
+  assets.value = result.projectId ? { label: result.label, count: result.count, size: result.size } : null;
+  customHtml.value = result.html;
+  seek(POSTER_TIME);
+  toast(`Imported ${result.label}`);
+}
+
+function clearAssets() {
+  dropProject(projectId.value);
+  projectId.value = '';
+  assets.value = null;
+}
+
+function onGeneratedHtml(next) {
+  customHtml.value = next;
+  seek(POSTER_TIME);
+}
+
 function setField(id, value) {
   valuesByTemplate[templateId.value][id] = value;
 }
@@ -145,9 +193,12 @@ function resetFields() {
   if (template.value) Object.assign(valuesByTemplate[templateId.value], defaultsFor(template.value));
 }
 
+// Clips are visible in [start, start + duration), so t === duration is always an empty frame.
+const lastFrame = () => Math.max(0, info.duration - 1 / 30);
+
 function onReady(next) {
   Object.assign(info, next);
-  if (time.value > info.duration) time.value = Math.min(POSTER_TIME, info.duration);
+  if (time.value > lastFrame()) time.value = Math.min(POSTER_TIME, lastFrame());
 }
 
 let raf = 0;
@@ -174,7 +225,7 @@ function pause() {
 const toggle = () => (playing.value ? pause() : play());
 function seek(t) {
   pause();
-  time.value = Math.min(info.duration, Math.max(0, t));
+  time.value = Math.min(lastFrame(), Math.max(0, t));
 }
 
 function onKeydown(e) {
@@ -191,7 +242,7 @@ async function submitRender(settings) {
   try {
     const body =
       mode.value === 'html'
-        ? { html: customHtml.value, ...settings }
+        ? { html: customHtml.value, projectId: projectId.value || undefined, ...settings }
         : { templateId: templateId.value, values: values.value, aspect: aspect.value, ...settings };
     const job = await api('/renders', { method: 'POST', body });
     upsert(job);
@@ -334,7 +385,7 @@ onBeforeUnmount(() => {
 
       <main id="stage" class="ws-stage" tabindex="-1">
         <h1 class="visually-hidden">Preview</h1>
-        <PreviewStage :html="html" :time="time" :busy="composing" :error="composeError" @ready="onReady" />
+        <PreviewStage :html="html" :base="previewBase" :time="time" :busy="composing" :error="composeError" @ready="onReady" />
         <Transport :time="time" :duration="info.duration" :playing="playing" :size="sizeLabel" @toggle="toggle" @seek="seek" />
         <DopeSheet :duration="info.duration" :time="time" :tracks="info.tracks" @seek="seek" @scrub-start="pause" />
       </main>
@@ -370,18 +421,25 @@ onBeforeUnmount(() => {
         <div class="side-body">
           <div v-show="sideTab === 'edit'" id="panel-edit" role="tabpanel" aria-labelledby="tab-edit">
             <Inspector
-          :mode="mode"
-          :template="template"
-          :values="values"
-          :aspects="catalog.aspects"
-          :aspect="aspect"
-          :html="customHtml"
-          :html-size="mode === 'html' ? `${sizeLabel}, ${info.duration}s` : ''"
-          @field="setField"
-          @reset="resetFields"
-          @aspect="(a) => (aspect = a)"
-          @html="(v) => (customHtml = v)"
-          @from-template="loadTemplateIntoEditor"
+              :mode="mode"
+              :template="template"
+              :values="values"
+              :aspects="catalog.aspects"
+              :aspect="aspect"
+              :html="customHtml"
+              :html-size="mode === 'html' ? `${sizeLabel}, ${info.duration}s` : ''"
+              :ai="health?.ai"
+              :project-id="projectId"
+              :assets="assets"
+              @field="setField"
+              @reset="resetFields"
+              @aspect="(a) => (aspect = a)"
+              @html="(v) => (customHtml = v)"
+              @generated="onGeneratedHtml"
+              @from-template="loadTemplateIntoEditor"
+              @ai-updated="(a) => health && (health.ai = a)"
+              @imported="onImported"
+              @clear-assets="clearAssets"
             />
           </div>
           <div v-show="sideTab === 'renders'" id="panel-renders" role="tabpanel" aria-labelledby="tab-renders">

@@ -116,7 +116,7 @@ function onKey(e) {
         @keydown="onKey"
       >
         <div class="dope-playhead" :style="{ left: pct(time) }">
-          <span class="dope-flag">{{ timecode(time) }}</span>
+          <span class="dope-flag" :data-edge="time < duration * 0.06 ? 'start' : time > duration * 0.94 ? 'end' : undefined">{{ timecode(time) }}</span>
         </div>
       </div>
     </div>

@@ -39,10 +39,10 @@ const posterTime = (t) => Math.min(3, t.duration - 1);
           :aria-current="mode === 'html' ? 'true' : undefined"
           @click="emit('custom')"
         >
-          <span class="thumb thumb--code" aria-hidden="true"><Icon name="code" :size="22" /></span>
+          <span class="thumb thumb--code" aria-hidden="true"><Icon name="sparkles" :size="22" /></span>
           <span class="rail-text">
-            <span class="rail-name">Custom HTML</span>
-            <span class="rail-summary">Write or paste your own composition.</span>
+            <span class="rail-name">AI &amp; custom HTML</span>
+            <span class="rail-summary">Generate with AI, import a file or folder, or paste your own.</span>
           </span>
         </button>
       </li>

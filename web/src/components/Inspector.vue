@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import Icon from './Icon.vue';
 import FieldControl from './FieldControl.vue';
+import AiPanel from './AiPanel.vue';
+import ImportZone from './ImportZone.vue';
 
 const props = defineProps({
   mode: { type: String, default: 'template' },
@@ -11,8 +13,11 @@ const props = defineProps({
   aspect: { type: String, default: '16:9' },
   html: { type: String, default: '' },
   htmlSize: { type: String, default: '' },
+  ai: { type: Object, default: null },
+  projectId: { type: String, default: '' },
+  assets: { type: Object, default: null },
 });
-const emit = defineEmits(['field', 'reset', 'aspect', 'html', 'from-template']);
+const emit = defineEmits(['field', 'reset', 'aspect', 'html', 'from-template', 'generated', 'ai-updated', 'imported', 'clear-assets']);
 
 const STYLE_TYPES = new Set(['color', 'select']);
 const isStyle = (f) => STYLE_TYPES.has(f.type) || f.id === 'duration';
@@ -74,17 +79,30 @@ const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' }
 
     <template v-else>
       <div class="inspector-head">
-        <h2 class="panel-title">Composition HTML</h2>
+        <h2 class="panel-title">Custom HTML</h2>
         <button type="button" class="ghost-btn" @click="emit('from-template')">
           <Icon name="layers" :size="14" /> Start from template
         </button>
       </div>
-      <p class="field-hint">
-        Size and length come from <code>data-width</code>, <code>data-height</code> and <code>data-duration</code> on
-        the root element.<span v-if="htmlSize"> Now {{ htmlSize }}.</span>
-      </p>
+      <AiPanel
+        :ai="ai"
+        :aspects="aspects"
+        :current-html="html"
+        :project-id="projectId"
+        @generated="(h) => emit('generated', h)"
+        @ai-updated="(a) => emit('ai-updated', a)"
+      />
+      <ImportZone :assets="assets" @imported="(p) => emit('imported', p)" @clear-assets="emit('clear-assets')" />
+
+      <div class="group">
+        <h3 class="group-title">Source</h3>
+        <p class="field-hint">
+          Size and length come from <code>data-width</code>, <code>data-height</code> and <code>data-duration</code>
+          on the root element.<span v-if="htmlSize"> Now {{ htmlSize }}.</span>
+        </p>
+      </div>
       <div class="field">
-        <label class="field-label" for="html-editor">Source</label>
+        <label class="visually-hidden" for="html-editor">Composition source</label>
         <textarea
           id="html-editor"
           class="input input--code"

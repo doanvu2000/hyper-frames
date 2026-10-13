@@ -23,9 +23,11 @@ const SHIM = `<script>
 const ERROR_TRAP = `<script>window.__timelines=window.__timelines||{};window.__hfErrors=[];addEventListener('error',(e)=>window.__hfErrors.push(e.message||'Script error'));<\/script>`;
 
 // rev forces a reload even when a buffer receives markup it already showed two edits ago.
-export function withPreviewShim(html, rev) {
+// base points relative asset URLs at the imported project, since srcdoc documents resolve against the app's URL.
+export function withPreviewShim(html, rev, base = '') {
   const head = html.match(/<head[^>]*>/i);
-  let out = head ? html.replace(head[0], head[0] + ERROR_TRAP) : ERROR_TRAP + html;
+  const prefix = (base ? `<base href="${base}">` : '') + ERROR_TRAP;
+  let out = head ? html.replace(head[0], head[0] + prefix) : prefix + html;
   const at = out.lastIndexOf('</body>');
   out = at === -1 ? out + SHIM : out.slice(0, at) + SHIM + out.slice(at);
   return `${out}\n<!-- preview rev ${rev} -->`;
