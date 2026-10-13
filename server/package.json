@@ -8,6 +8,7 @@
     "start": "node src/index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "express": "^5.1.0",
     "hyperframes": "0.8.153"
   }

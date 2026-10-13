@@ -49,10 +49,11 @@ export class RenderQueue extends EventEmitter {
     return this.jobs.get(id);
   }
 
-  async enqueue({ html, name, meta, fps, quality, format }) {
+  async enqueue({ html, name, meta, fps, quality, format, prepare }) {
     const id = randomUUID();
     const dir = path.join(this.dataDir, id);
     await fs.mkdir(dir, { recursive: true });
+    await prepare?.(dir);
     await fs.writeFile(path.join(dir, 'index.html'), html, 'utf8');
     const job = {
       id,
