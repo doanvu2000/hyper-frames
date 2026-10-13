@@ -7,7 +7,10 @@ import { templateCatalog } from './templates/index.js';
 import { RenderQueue, CLI_VERSION, OUTPUT_EXT, ffmpegAvailable } from './renderQueue.js';
 import { ProjectStore } from './projects.js';
 import { Config } from './config.js';
-import { generateComposition, MODEL } from './generate.js';
+import { generateComposition, MODEL, PROVIDERS } from './generate.js';
+import { StatusHub } from './status.js';
+import { CLIS, runCommand } from './cli.js';
+import { mountMcp } from './mcp.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);
@@ -26,9 +29,14 @@ await queue.load();
 const projects = new ProjectStore(path.join(DATA_ROOT, 'projects'));
 const config = new Config(path.join(DATA_ROOT, 'config.json'));
 await config.load();
+const hub = new StatusHub({ config });
+hub.refresh();
+const mcpUrl = (id) => `http://127.0.0.1:${PORT}/mcp?client=${id}`;
+const PUSH_TTL_MS = 10 * 60_000;
+let pendingPush = null;
 
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -38,20 +46,58 @@ app.get('/api/health', (_req, res) => {
     pid: process.pid,
     bootedAt: BOOTED_AT,
     busy: queue.list().some((j) => j.status === 'running' || j.status === 'queued'),
-    ai: { ready: Boolean(config.anthropicApiKey), keySource: config.keySource, model: MODEL },
+    ai: aiSettings(),
   });
 });
 
+app.get('/api/status', (_req, res) => res.json(hub.snapshot()));
+
+app.post('/api/status/refresh', async (_req, res) => {
+  await hub.refresh();
+  res.json(hub.snapshot());
+});
+
+app.put('/api/connections/:id/mcp', async (req, res) => {
+  const cli = CLIS[req.params.id];
+  if (!cli) throw new HttpError(404, 'Unknown connection.');
+  const connect = Boolean(req.body?.connected);
+  // Re-adding replaces an entry that may point at an old port.
+  if (connect && (await cli.mcpRegistered())) await runCommand(cli.bin, cli.removeMcp(), { timeoutMs: 30000 });
+  const result = await runCommand(cli.bin, connect ? cli.addMcp(mcpUrl(req.params.id)) : cli.removeMcp(), { timeoutMs: 30000 });
+  await hub.refresh();
+  if ((await cli.mcpRegistered()) !== connect) {
+    const why = `${result.stderr}\n${result.stdout}`.trim().split(/\r?\n/).slice(-2).join(' ');
+    throw new HttpError(502, `${cli.label} did not ${connect ? 'add' : 'remove'} the MCP server. ${why}`.trim());
+  }
+  res.json(hub.snapshot());
+});
+
 app.put('/api/settings/ai', async (req, res) => {
-  const key = String(req.body?.apiKey ?? '').trim();
-  if (key && !key.startsWith('sk-ant-')) throw new HttpError(400, 'That does not look like an Anthropic API key. Keys start with "sk-ant-".');
-  await config.set({ anthropicApiKey: key || undefined });
-  res.json({ ready: Boolean(config.anthropicApiKey), keySource: config.keySource, model: MODEL });
+  const body = req.body ?? {};
+  const patch = {};
+  if ('apiKey' in body) {
+    const key = String(body.apiKey ?? '').trim();
+    if (key && !key.startsWith('sk-ant-')) throw new HttpError(400, 'That does not look like an Anthropic API key. Keys start with "sk-ant-".');
+    patch.anthropicApiKey = key || undefined;
+  }
+  if (body.provider !== undefined) {
+    if (!PROVIDERS.includes(body.provider)) throw new HttpError(400, `Unknown AI source "${body.provider}".`);
+    patch.aiProvider = body.provider;
+  }
+  await config.set(patch);
+  hub.emit('status', hub.snapshot());
+  res.json(aiSettings());
 });
 
 app.post('/api/generate', async (req, res) => {
   const { prompt, aspect = '16:9', duration = 6, currentHtml, projectId } = req.body ?? {};
-  if (!config.anthropicApiKey) throw new HttpError(400, 'Add an Anthropic API key in AI settings first.');
+  const provider = req.body?.provider ?? config.aiProvider;
+  if (!PROVIDERS.includes(provider)) throw new HttpError(400, `Unknown AI source "${provider}".`);
+  const source = hub.snapshot().connections.find((c) => c.id === provider);
+  if (!source.available) {
+    throw new HttpError(400, provider === 'api' ? 'Add an Anthropic API key in AI settings first.' : `${source.label} is not ready. ${source.detail}`);
+  }
+  if (hub.generation) throw new HttpError(409, `${labelOf(hub.generation.provider)} is already writing a composition. Wait for it or stop it.`);
   if (!String(prompt ?? '').trim()) throw new HttpError(400, 'Describe the video you want first.');
   if (!ASPECTS[aspect]) throw new HttpError(400, `Unsupported aspect "${aspect}".`);
   const seconds = Math.min(60, Math.max(2, Number(duration) || 6));
@@ -62,11 +108,21 @@ app.post('/api/generate', async (req, res) => {
   const send = (event) => res.write(`${JSON.stringify(event)}\n`);
   const abort = new AbortController();
   res.on('close', () => abort.abort());
+  let phase = 'calling';
+  hub.setGeneration({ provider, phase, startedAt: Date.now() });
+  send({ type: 'phase', phase, provider });
   try {
     const html = await generateComposition({
+      provider,
       apiKey: config.anthropicApiKey,
       signal: abort.signal,
       onText: (text) => send({ type: 'delta', text }),
+      onPhase: (next) => {
+        if (next === phase) return;
+        phase = next;
+        hub.setGeneration({ ...hub.generation, phase });
+        send({ type: 'phase', phase, provider });
+      },
       prompt: String(prompt).slice(0, 4000),
       aspect,
       duration: seconds,
@@ -75,7 +131,9 @@ app.post('/api/generate', async (req, res) => {
     });
     send({ type: 'done', html });
   } catch (err) {
-    if (!abort.signal.aborted) send({ type: 'error', error: err.status && err.status < 500 ? err.message : err.message || 'Generation failed.' });
+    if (!abort.signal.aborted) send({ type: 'error', error: err.message || 'Generation failed.' });
+  } finally {
+    hub.setGeneration(null);
   }
   res.end();
 });
@@ -128,20 +186,32 @@ app.get('/api/renders/stream', (req, res) => {
   });
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   send('snapshot', queue.list());
+  send('status', hub.snapshot());
+  if (pendingPush && Date.now() - pendingPush.at < PUSH_TTL_MS) send('push', pendingPush);
+  pendingPush = null;
   const onJob = (job) => send('job', job);
   const onRemoved = (id) => send('removed', { id });
+  const onStatus = (status) => send('status', status);
+  const onPush = (push) => send('push', push);
   queue.on('job', onJob);
   queue.on('removed', onRemoved);
+  hub.on('status', onStatus);
+  hub.on('push', onPush);
   const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
   req.on('close', () => {
     clearInterval(ping);
     queue.off('job', onJob);
     queue.off('removed', onRemoved);
+    hub.off('status', onStatus);
+    hub.off('push', onPush);
   });
 });
 
 app.post('/api/renders', async (req, res) => {
-  const body = req.body ?? {};
+  res.status(201).json(await createRender(req.body ?? {}));
+});
+
+async function createRender(body, { origin, prepare: prepareSource } = {}) {
   const fps = Number(body.fps ?? 30);
   const quality = body.quality ?? 'looks';
   const format = body.format ?? 'mp4';
@@ -162,6 +232,8 @@ app.post('/api/renders', async (req, res) => {
     if (body.projectId) {
       if (!(await projects.exists(body.projectId))) throw new HttpError(404, 'The imported assets are gone. Import the files again before rendering.');
       prepare = (dir) => projects.copyInto(body.projectId, dir);
+    } else {
+      prepare = prepareSource;
     }
   } else {
     const composed = composeTemplate(body.templateId, body.values, body.aspect);
@@ -169,7 +241,22 @@ app.post('/api/renders', async (req, res) => {
     meta = { source: 'template', templateId: body.templateId, aspect: body.aspect, width: composed.width, height: composed.height, duration: composed.duration };
     name = String(body.name || templateCatalog().find((t) => t.id === body.templateId)?.name || body.templateId).slice(0, 80);
   }
-  res.status(201).json(await queue.enqueue({ html, name, meta, fps, quality, format, prepare }));
+  if (origin) meta.origin = origin;
+  return queue.enqueue({ html, name, meta, fps, quality, format, prepare });
+}
+
+mountMcp(app, {
+  hub,
+  queue,
+  projects,
+  createRender,
+  pushToStudio(push) {
+    const viewers = hub.listenerCount('push');
+    const event = { ...push, at: Date.now() };
+    if (viewers) hub.emit('push', event);
+    else pendingPush = event;
+    return viewers;
+  },
 });
 
 app.post('/api/renders/:id/cancel', async (req, res) => {
@@ -208,6 +295,14 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, HOST, () => {
   console.log(`HyperFrames Studio API on http://${HOST}:${PORT} (hyperframes ${CLI_VERSION})`);
 });
+
+function aiSettings() {
+  return { ready: Boolean(config.anthropicApiKey), keySource: config.keySource, model: MODEL, provider: config.aiProvider };
+}
+
+function labelOf(provider) {
+  return CLIS[provider]?.label ?? 'Anthropic API';
+}
 
 function readRootMeta(html) {
   const root = html.match(/<[^>]*data-composition-id[^>]*>/)?.[0] ?? '';

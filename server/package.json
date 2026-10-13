@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "express": "^5.1.0",
-    "hyperframes": "0.8.153"
+    "hyperframes": "0.8.153",
+    "zod": "^4.6.7"
   }
 }

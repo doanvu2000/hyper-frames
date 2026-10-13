@@ -25,6 +25,10 @@ export class Config {
     return process.env.ANTHROPIC_API_KEY || this.data.anthropicApiKey || '';
   }
 
+  get aiProvider() {
+    return this.data.aiProvider ?? 'api';
+  }
+
   get keySource() {
     if (process.env.ANTHROPIC_API_KEY) return 'env';
     return this.data.anthropicApiKey ? 'saved' : null;

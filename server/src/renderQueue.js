@@ -201,7 +201,8 @@ function summarizeFailure(log, code) {
 }
 
 // Chrome workers are grandchildren of the CLI; on Windows a plain kill() leaves them running.
-function killTree(child) {
+export function killTree(child) {
+  if (!child.pid || child.exitCode !== null) return;
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true });
   } else {
