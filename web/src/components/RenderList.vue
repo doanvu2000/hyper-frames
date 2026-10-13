@@ -4,7 +4,10 @@ import Icon from './Icon.vue';
 import { fileUrl } from '../lib/api.js';
 import { formatBytes } from '../lib/timecode.js';
 
-defineProps({ renders: { type: Array, default: () => [] } });
+const props = defineProps({
+  renders: { type: Array, default: () => [] },
+  sources: { type: Array, default: () => [] },
+});
 const emit = defineEmits(['cancel', 'remove']);
 
 const watching = ref(null);
@@ -22,6 +25,9 @@ const STATUS = {
   failed: { label: 'Failed', icon: 'alert' },
   cancelled: { label: 'Cancelled', icon: 'x' },
 };
+
+const originLabel = (job) => props.sources.find((s) => s.id === job.origin)?.label ?? null;
+const statusLabel = (job) => (job.status === 'running' && originLabel(job) ? `Rendering with ${originLabel(job)}` : STATUS[job.status].label);
 
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
 const when = (iso) => timeFmt.format(new Date(iso));
@@ -52,6 +58,7 @@ function confirmRemove(job) {
             <span>{{ job.fps }} fps</span>
             <span v-if="job.duration">{{ job.duration }}s</span>
             <span>{{ when(job.createdAt) }}</span>
+            <span v-if="originLabel(job)" class="job-origin">via {{ originLabel(job) }}</span>
           </p>
         </div>
 
@@ -61,7 +68,7 @@ function confirmRemove(job) {
             :size="14"
             :class="{ spin: job.status === 'running' || job.status === 'queued' }"
           />
-          {{ STATUS[job.status].label }}
+          {{ statusLabel(job) }}
           <span v-if="job.status === 'done'" class="job-detail">{{ formatBytes(job.size) }} · {{ elapsed(job) }}</span>
         </p>
 

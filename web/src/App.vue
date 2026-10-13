@@ -9,6 +9,7 @@ import DopeSheet from './components/DopeSheet.vue';
 import Inspector from './components/Inspector.vue';
 import RenderPanel from './components/RenderPanel.vue';
 import RenderList from './components/RenderList.vue';
+import ConnectionsMenu from './components/ConnectionsMenu.vue';
 
 // v2: template defaults changed (Geist font); older drafts would pin the old typeface.
 const DRAFT_KEY = 'hfs-draft-v2';
@@ -16,6 +17,7 @@ const POSTER_TIME = 2;
 
 const catalog = reactive({ templates: [], aspects: [] });
 const health = ref(null);
+const status = ref(null);
 const loadError = ref('');
 
 const mode = ref('template');
@@ -185,6 +187,34 @@ function onGeneratedHtml(next) {
   seek(POSTER_TIME);
 }
 
+const sourceLabel = (id) => status.value?.connections.find((c) => c.id === id)?.label ?? 'An AI tool';
+
+// Sent by a CLI through MCP. No confirm dialog: nobody may be at the screen, so offer Undo instead.
+function onPushed(push) {
+  const before = { html: customHtml.value, projectId: projectId.value, assets: assets.value, mode: mode.value };
+  mode.value = 'html';
+  customHtml.value = push.html;
+  projectId.value = push.projectId ?? '';
+  assets.value = push.projectId ? { label: push.name ?? `Files from ${sourceLabel(push.client)}`, count: push.assets?.count ?? 0, size: push.assets?.size ?? 0 } : null;
+  sideTab.value = 'edit';
+  seek(POSTER_TIME);
+  toast(`${sourceLabel(push.client)} opened ${push.name ? `"${push.name}"` : 'a composition'}`, {
+    label: 'Undo',
+    run: () => {
+      if (projectId.value && projectId.value !== before.projectId) dropProject(projectId.value);
+      mode.value = before.mode;
+      customHtml.value = before.html;
+      projectId.value = before.projectId;
+      assets.value = before.assets;
+    },
+  });
+}
+
+function onAiUpdated(ai) {
+  if (health.value) health.value.ai = ai;
+  if (status.value) status.value = { ...status.value, provider: ai.provider };
+}
+
 function setField(id, value) {
   valuesByTemplate[templateId.value][id] = value;
 }
@@ -308,6 +338,8 @@ function connectStream() {
   stream = new EventSource('/api/renders/stream');
   stream.addEventListener('snapshot', (e) => (renders.value = JSON.parse(e.data)));
   stream.addEventListener('job', (e) => upsert(JSON.parse(e.data)));
+  stream.addEventListener('status', (e) => (status.value = JSON.parse(e.data)));
+  stream.addEventListener('push', (e) => onPushed(JSON.parse(e.data)));
   stream.addEventListener('removed', (e) => {
     const { id } = JSON.parse(e.data);
     renders.value = renders.value.filter((r) => r.id !== id);
@@ -360,6 +392,7 @@ onBeforeUnmount(() => {
         <span class="brand-mark" aria-hidden="true">HF</span>
         <span class="brand-word">HyperFrames <span class="brand-studio">Studio</span></span>
       </div>
+      <ConnectionsMenu :status="status" :renders="renders" @status="(s) => (status = s)" />
       <p v-if="health" class="health" :data-ok="Boolean(health.ffmpeg)">
         <span class="health-dot" aria-hidden="true" />
         <span v-if="health.ffmpeg">Ready to render</span>
@@ -429,6 +462,8 @@ onBeforeUnmount(() => {
               :html="customHtml"
               :html-size="mode === 'html' ? `${sizeLabel}, ${info.duration}s` : ''"
               :ai="health?.ai"
+              :status="status"
+              :renders="renders"
               :project-id="projectId"
               :assets="assets"
               @field="setField"
@@ -437,13 +472,13 @@ onBeforeUnmount(() => {
               @html="(v) => (customHtml = v)"
               @generated="onGeneratedHtml"
               @from-template="loadTemplateIntoEditor"
-              @ai-updated="(a) => health && (health.ai = a)"
+              @ai-updated="onAiUpdated"
               @imported="onImported"
               @clear-assets="clearAssets"
             />
           </div>
           <div v-show="sideTab === 'renders'" id="panel-renders" role="tabpanel" aria-labelledby="tab-renders">
-            <RenderList :renders="renders" @cancel="cancelRender" @remove="removeRender" />
+            <RenderList :renders="renders" :sources="status?.connections ?? []" @cancel="cancelRender" @remove="removeRender" />
           </div>
         </div>
 

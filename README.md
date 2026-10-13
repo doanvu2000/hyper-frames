@@ -42,8 +42,21 @@ Open **AI & custom HTML** in the template list.
   preview, tweak and render. Tick "Revise" to change the current HTML instead of starting over. Needs an Anthropic
   API key: paste it in the panel (saved to `server/data/config.json`, never sent to the browser) or set
   `ANTHROPIC_API_KEY`. The model defaults to `claude-opus-5-5`; override with `HF_MODEL`.
+- **Model source** — instead of an API key, pick **Claude CLI** or **Codex CLI** to generate with the subscription you
+  are signed in to (`claude auth login` / `codex login`). The CLIs run without tools in an empty temp folder. Override
+  their models with `HF_CLAUDE_MODEL` / `HF_CODEX_MODEL`.
 - **Import** — drop an `.html` file, or the folder it lives in when it uses local images, video, audio or fonts.
   Assets are stored per import in `server/data/projects/<id>/` and copied next to the HTML for each render.
+
+## Drive the Studio from Claude Code or Codex (MCP)
+
+The Studio is also an MCP server at `http://127.0.0.1:8787/mcp`. Open **AI connections** in the top bar and press
+**Add to Claude Code** / **Add to Codex** (or run `claude mcp add --scope user --transport http hyperframes-studio
+"http://127.0.0.1:8787/mcp?client=claude-cli"`). Then, in a new CLI session, ask it to make a video. It can read the
+authoring guide, fill templates, look at frames, run checks, open the result in the Studio and render it.
+
+The same menu shows each connection's state: Not connected, Ready to connect, Connected, Calling, Running, and
+Rendering with its progress. Keep the Studio open while a CLI uses it.
 
 ## Adding a template
 

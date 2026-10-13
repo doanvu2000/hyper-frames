@@ -11,6 +11,9 @@
   --signal-soft: #eceefe;
   --danger: #c4261d;
   --ok: #1d7a46;
+  --busy: #d99a00;
+  --busy-ink: #8a5a00;
+  --busy-soft: #fff4d6;
 
   /* The preview well and dope sheet stay dark in both themes, like an edit bay monitor. */
   --well: #0c0d11;
@@ -52,6 +55,9 @@
     --signal-soft: #1f2340;
     --danger: #ff7a70;
     --ok: #5fd08f;
+    --busy: #ffc81f;
+    --busy-ink: #ffd25a;
+    --busy-soft: #2e2711;
     --well: #08090c;
     --well-2: #111317;
     --shadow: none;
@@ -72,6 +78,9 @@
   --signal-soft: #1f2340;
   --danger: #ff7a70;
   --ok: #5fd08f;
+  --busy: #ffc81f;
+  --busy-ink: #ffd25a;
+  --busy-soft: #2e2711;
   --well: #08090c;
   --well-2: #111317;
   --shadow: none;
@@ -1364,6 +1373,226 @@ code {
   }
 }
 
+/* ---------- AI connections ---------- */
+
+.state-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--ink-2);
+}
+.state-dot[data-state='ready'] {
+  box-shadow: inset 0 0 0 1.5px var(--ok);
+}
+.state-dot[data-state='connected'] {
+  background: var(--ok);
+  box-shadow: none;
+}
+.state-dot[data-state='calling'],
+.state-dot[data-state='running'] {
+  background: var(--signal);
+  box-shadow: none;
+  animation: state-pulse 0.9s ease-in-out infinite alternate;
+}
+.state-dot[data-state='rendering'] {
+  background: var(--busy);
+  box-shadow: none;
+  animation: state-pulse 0.9s ease-in-out infinite alternate;
+}
+.state-dot[data-state='checking'] {
+  animation: state-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes state-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.state-pill[data-state='ready'],
+.state-pill[data-state='connected'] {
+  color: var(--ok);
+}
+.state-pill[data-state='calling'],
+.state-pill[data-state='running'] {
+  color: var(--signal);
+  background: var(--signal-soft);
+  border-color: transparent;
+}
+.state-pill[data-state='rendering'] {
+  color: var(--busy-ink);
+  background: var(--busy-soft);
+  border-color: transparent;
+}
+
+.conn-menu {
+  position: relative;
+}
+.conn-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(300px, 46vw);
+  min-height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+.conn-trigger:hover,
+.conn-trigger[aria-expanded='true'] {
+  border-color: var(--line-strong);
+  background: var(--panel-2);
+}
+.conn-trigger-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.conn-trigger .icon {
+  color: var(--ink-2);
+}
+.conn-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 18px 48px rgb(16 18 24 / 0.16);
+  animation: toast-in 180ms var(--ease-out);
+}
+.conn-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.conn-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.conn {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.conn:first-child {
+  border-top: 0;
+}
+.conn-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.conn-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.conn-version {
+  font: 400 11.5px/1 var(--font-mono);
+  color: var(--ink-2);
+}
+.conn-head .state-pill {
+  margin-left: auto;
+}
+.conn-detail {
+  margin-top: 6px;
+  font-size: 13px;
+}
+.conn-sub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.conn-mcp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.conn-mcp-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.conn-howto {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.ghost-btn:disabled,
+.text-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-source-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 8px;
+}
+.ai-source-state .field-hint {
+  margin: 0;
+}
+.ai-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  font-size: 13px;
+}
+.ai-blocked .icon {
+  margin-top: 3px;
+  color: var(--ink-2);
+}
+.ai-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.job-origin {
+  color: var(--signal);
+}
+
 /* ---------- Breakpoints ---------- */
 
 /* Below desktop the page scrolls, so the preview hugs the video's own shape and Render stays pinned to the screen. */
@@ -1396,6 +1625,13 @@ code {
 }
 
 @media (max-width: 719px) {
+  .conn-panel {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: 64px;
+    width: auto;
+  }
   .rail-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1474,7 +1710,8 @@ code {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
-  .spin {
-    animation: none;
+  .spin,
+  .state-dot {
+    animation: none !important;
   }
 }

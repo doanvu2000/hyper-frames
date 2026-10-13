@@ -36,3 +36,13 @@ Tỉ lệ khung: 16:9 (1920×1080), 9:16 (1080×1920), 1:1 (1080×1080).
 - Ý tưởng: bàn dựng broadcast — chữ Archivo width rộng cho tiêu đề (gợi title card truyền hình),
   Martian Mono cho timecode, accent ultramarine + vàng playhead (burn-in timecode).
 - Signature: track ruler kiểu dope-sheet — lane theo clip thật, tick theo frame, playhead vàng.
+
+## Kết nối Claude CLI / Codex CLI (2026-10-14)
+- Nguồn model khi Generate: `api` (Anthropic key) · `claude-cli` (`claude -p --output-format stream-json`, prompt qua stdin,
+  `--tools ""`, `--strict-mcp-config`, `--setting-sources project`) · `codex-cli` (`codex exec --json --sandbox read-only -`).
+  Lưu lựa chọn ở `config.json` (`aiProvider`).
+- MCP: Studio phục vụ Streamable HTTP tại `/mcp?client=<id>`. Nút "Add to Claude Code/Codex" chạy
+  `claude mcp add --scope user --transport http` / `codex mcp add --url`. Tool: authoring_guide, list_templates,
+  compose_template, snapshot_frames, check_composition, open_in_studio, render_video, render_status, list_renders.
+- Trạng thái (`StatusHub`, đẩy qua SSE `status`): Not connected → Ready to connect → Connected (CLI giữ GET stream)
+  → Calling (tool đang chạy / đang chờ model) → Running (model đang viết) → Rendering x% (job có `origin`).

@@ -14,6 +14,8 @@ const props = defineProps({
   html: { type: String, default: '' },
   htmlSize: { type: String, default: '' },
   ai: { type: Object, default: null },
+  status: { type: Object, default: null },
+  renders: { type: Array, default: () => [] },
   projectId: { type: String, default: '' },
   assets: { type: Object, default: null },
 });
@@ -86,10 +88,12 @@ const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' }
       </div>
       <AiPanel
         :ai="ai"
+        :status="status"
+        :renders="renders"
         :aspects="aspects"
         :current-html="html"
         :project-id="projectId"
-        @generated="(h) => emit('generated', h)"
+        @generated="(h, by) => emit('generated', h, by)"
         @ai-updated="(a) => emit('ai-updated', a)"
       />
       <ImportZone :assets="assets" @imported="(p) => emit('imported', p)" @clear-assets="emit('clear-assets')" />
