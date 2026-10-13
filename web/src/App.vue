@@ -2,7 +2,7 @@
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { api, fileUrl } from './lib/api.js';
 import Icon from './components/Icon.vue';
-import TemplateRail from './components/TemplateRail.vue';
+import StartSwitch from './components/StartSwitch.vue';
 import PreviewStage from './components/PreviewStage.vue';
 import Transport from './components/Transport.vue';
 import DopeSheet from './components/DopeSheet.vue';
@@ -18,6 +18,7 @@ import { t, locale, setLocale } from './lib/i18n.js';
 // v2: template defaults changed (Geist font); older drafts would pin the old typeface.
 const DRAFT_KEY = 'hfs-draft-v2';
 const POSTER_TIME = 2;
+const year = new Date().getFullYear();
 
 const catalog = reactive({ templates: [], aspects: [] });
 const health = ref(null);
@@ -54,8 +55,8 @@ const thumbs = reactive({});
 const sideTab = ref('edit');
 const toasts = ref([]);
 
-const LAYOUT_KEY = 'hfs-layout';
-const PANEL = { rail: { min: 200, max: 440, initial: 236 }, side: { min: 300, max: 600, initial: 360 } };
+const LAYOUT_KEY = 'hfs-layout-v2';
+const PANEL = { side: { min: 320, max: 640, initial: 400 } };
 const layout = reactive(readLayout());
 const GUIDE_KEY = 'hfs-guide-v1';
 const guideOpen = ref(!readFlag(GUIDE_KEY));
@@ -260,9 +261,9 @@ function readLayout() {
   try {
     const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? '{}');
     const pick = (k) => (Number.isFinite(saved[k]) ? Math.min(PANEL[k].max, Math.max(PANEL[k].min, saved[k])) : PANEL[k].initial);
-    return { rail: pick('rail'), side: pick('side') };
+    return { side: pick('side') };
   } catch {
-    return { rail: PANEL.rail.initial, side: PANEL.side.initial };
+    return { side: PANEL.side.initial };
   }
 }
 function resizePanel(key, width) {
@@ -351,12 +352,40 @@ function seek(t) {
   time.value = Math.min(lastFrame(), Math.max(0, t));
 }
 
+const timelineOpen = ref(readFlag('hfs-timeline-hidden') === false);
+const isFullscreen = ref(false);
+const stageEl = ref(null);
+
+function toggleTimeline() {
+  timelineOpen.value = !timelineOpen.value;
+  try {
+    localStorage.setItem('hfs-timeline-hidden', timelineOpen.value ? '0' : '1');
+  } catch {}
+}
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else stageEl.value?.requestFullscreen().catch(() => {});
+}
+const onFullscreenChange = () => (isFullscreen.value = document.fullscreenElement === stageEl.value);
+
+// Space plays anywhere outside a text field; the rest are single-letter shortcuts like most video tools.
 function onKeydown(e) {
-  if (e.code !== 'Space' || e.repeat) return;
-  const tag = e.target.tagName;
-  if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag) || e.target.isContentEditable) return;
-  e.preventDefault();
-  toggle();
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  const el = e.target;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable) return;
+  if (e.code === 'Space') {
+    if (['BUTTON', 'A'].includes(el.tagName)) return;
+    e.preventDefault();
+    toggle();
+  } else if (e.key === 'm' || e.key === 'M') {
+    if (info.audio.length) toggleMute();
+  } else if (e.key === 'f' || e.key === 'F') {
+    toggleFullscreen();
+  } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !el.closest('[role="slider"], [role="separator"]')) {
+    e.preventDefault();
+    const step = e.shiftKey ? 1 : 1 / 30;
+    seek(time.value + (e.key === 'ArrowLeft' ? -step : step));
+  }
 }
 
 async function submitRender(settings) {
@@ -455,6 +484,7 @@ function cycleTheme() {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
   try {
     const data = await api('/templates');
     catalog.templates = data.templates;
@@ -473,6 +503,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
   cancelAnimationFrame(raf);
   sound.stop();
   stream?.close();
@@ -484,9 +515,18 @@ onBeforeUnmount(() => {
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">HF</span>
+        <img class="brand-mark" src="/logo.svg" alt="" width="28" height="28" />
         <span class="brand-word">HyperFrames <span class="brand-studio">Studio</span></span>
       </div>
+      <StartSwitch
+        class="topbar-start"
+        :templates="catalog.templates"
+        :thumbs="thumbs"
+        :active-id="templateId"
+        :mode="mode"
+        @select="selectTemplate"
+        @custom="openCustom"
+      />
       <ConnectionsMenu :status="status" :renders="renders" @status="(s) => (status = s)" />
       <p v-if="health" class="health" :data-ok="Boolean(health.ffmpeg)">
         <span class="health-dot" aria-hidden="true" />
@@ -518,31 +558,19 @@ onBeforeUnmount(() => {
 
     <p v-if="loadError" class="banner" role="alert"><Icon name="alert" :size="16" /> {{ loadError }}</p>
 
-    <div class="workspace" :style="{ '--rail-w': `${layout.rail}px`, '--side-w': `${layout.side}px` }">
-      <TemplateRail
-        class="ws-rail"
-        :templates="catalog.templates"
-        :thumbs="thumbs"
-        :active-id="templateId"
-        :mode="mode"
-        @select="selectTemplate"
-        @custom="openCustom"
-      />
-
-      <PanelSplitter
-        class="ws-split ws-split--rail"
-        :label="t('app.resizeRail')"
-        edge="left"
-        :width="layout.rail"
-        :min="PANEL.rail.min"
-        :max="PANEL.rail.max"
-        @resize="(w) => resizePanel('rail', w)"
-        @reset="resizePanel('rail', PANEL.rail.initial)"
-      />
-
-      <main id="stage" class="ws-stage" tabindex="-1">
+    <div class="workspace" :style="{ '--side-w': `${layout.side}px` }">
+      <main id="stage" ref="stageEl" class="ws-stage" tabindex="-1">
         <h1 class="visually-hidden">{{ t('app.preview') }}</h1>
-        <PreviewStage :html="html" :base="previewBase" :time="time" :busy="composing" :error="composeError" @ready="onReady" />
+        <PreviewStage
+          :html="html"
+          :base="previewBase"
+          :time="time"
+          :playing="playing"
+          :busy="composing"
+          :error="composeError"
+          @ready="onReady"
+          @toggle="toggle"
+        />
         <Transport
           :time="time"
           :duration="info.duration"
@@ -553,10 +581,15 @@ onBeforeUnmount(() => {
           :volume="volume"
           @toggle="toggle"
           @seek="seek"
+          :timeline="timelineOpen"
+          :fullscreen="isFullscreen"
+          @scrub-start="pause"
+          @timeline="toggleTimeline"
+          @fullscreen="toggleFullscreen"
           @mute="toggleMute"
           @volume="setVolume"
         />
-        <DopeSheet :duration="info.duration" :time="time" :tracks="info.tracks" @seek="seek" @scrub-start="pause" />
+        <DopeSheet v-show="timelineOpen" :duration="info.duration" :time="time" :tracks="info.tracks" @seek="seek" @scrub-start="pause" />
       </main>
 
       <PanelSplitter
@@ -629,9 +662,15 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <RenderPanel :disabled="!html || Boolean(loadError)" :submitting="submitting" :error="renderError" @submit="submitRender" />
+        <RenderPanel
+          :width="info.width"
+          :height="info.height"
+          :duration="info.duration"
+          :disabled="!html || Boolean(loadError)" :submitting="submitting" :error="renderError" @submit="submitRender" />
       </aside>
     </div>
+
+    <footer class="app-footer">© {{ year }} · by Jin Vũ</footer>
   </div>
 
   <FirstRunGuide

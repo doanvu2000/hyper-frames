@@ -10,8 +10,9 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
   error: { type: String, default: '' },
   base: { type: String, default: '' },
+  playing: { type: Boolean, default: false },
 });
-const emit = defineEmits(['ready']);
+const emit = defineEmits(['ready', 'toggle']);
 
 const well = ref(null);
 const frameEls = ref([]);
@@ -81,8 +82,8 @@ onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <template>
-  <div ref="well" class="stage-well" :style="{ '--frame-ratio': `${size.w} / ${size.h}` }">
-    <div class="stage-frame" :style="{ width: `${size.w * scale}px`, height: `${size.h * scale}px` }">
+  <div ref="well" class="stage-well" :style="{ '--frame-ratio': `${size.w} / ${size.h}` }" @click.self="emit('toggle')">
+    <div class="stage-frame" :style="{ width: `${size.w * scale}px`, height: `${size.h * scale}px` }" @click="emit('toggle')">
       <iframe
         v-for="(doc, i) in docs"
         :key="i"
@@ -96,6 +97,9 @@ onBeforeUnmount(() => observer?.disconnect());
         :style="{ width: `${size.w}px`, height: `${size.h}px`, transform: `scale(${scale})` }"
         @load="onLoad(i)"
       />
+      <span class="stage-hint" :data-playing="playing" aria-hidden="true">
+        <Icon :name="playing ? 'pause' : 'play'" :size="26" />
+      </span>
     </div>
     <p v-if="busy" class="stage-busy" role="status">
       <Icon name="loader" :size="14" class="spin" /> {{ t('preview.updating') }}
