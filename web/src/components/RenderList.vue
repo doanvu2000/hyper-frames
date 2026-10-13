@@ -36,12 +36,12 @@ function confirmRemove(job) {
 </script>
 
 <template>
-  <section class="renders" aria-labelledby="renders-title">
-    <h2 id="renders-title" class="panel-title"><Icon name="film" :size="16" /> Renders</h2>
-    <p v-if="!renders.length" class="renders-empty">
-      Nothing rendered yet. Pick a template, adjust it, then press Render. Files are saved in
-      <code>server/data/renders</code>.
-    </p>
+  <section class="renders" aria-label="Renders">
+    <div v-if="!renders.length" class="renders-empty">
+      <Icon name="film" :size="28" />
+      <p>No renders yet.</p>
+      <p class="field-hint">Press Render below. Finished files are kept in <code>server/data/renders</code>.</p>
+    </div>
     <ul v-else class="renders-list">
       <li v-for="job in renders" :key="job.id" class="job" :data-status="job.status">
         <div class="job-main">

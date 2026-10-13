@@ -1,17 +1,20 @@
 <script setup>
 import Icon from './Icon.vue';
+import TemplateThumb from './TemplateThumb.vue';
 
 defineProps({
   templates: { type: Array, default: () => [] },
+  thumbs: { type: Object, default: () => ({}) },
   activeId: { type: String, default: '' },
   mode: { type: String, default: 'template' },
 });
 const emit = defineEmits(['select', 'custom']);
+const posterTime = (t) => Math.min(3, t.duration - 1);
 </script>
 
 <template>
   <nav class="rail" aria-label="Templates">
-    <h2 class="panel-title"><Icon name="layers" :size="16" /> Templates</h2>
+    <h2 class="panel-title">Templates</h2>
     <ul class="rail-list">
       <li v-for="t in templates" :key="t.id">
         <button
@@ -21,9 +24,11 @@ const emit = defineEmits(['select', 'custom']);
           :aria-current="mode === 'template' && t.id === activeId ? 'true' : undefined"
           @click="emit('select', t.id)"
         >
-          <span class="rail-name">{{ t.name }}</span>
-          <span class="rail-summary">{{ t.summary }}</span>
-          <span class="rail-length">{{ t.duration }}s default</span>
+          <TemplateThumb :html="thumbs[t.id]" :time="posterTime(t)" />
+          <span class="rail-text">
+            <span class="rail-name">{{ t.name }}</span>
+            <span class="rail-summary">{{ t.summary }}</span>
+          </span>
         </button>
       </li>
       <li>
@@ -34,8 +39,11 @@ const emit = defineEmits(['select', 'custom']);
           :aria-current="mode === 'html' ? 'true' : undefined"
           @click="emit('custom')"
         >
-          <span class="rail-name"><Icon name="code" :size="15" /> Custom HTML</span>
-          <span class="rail-summary">Write or paste your own composition. Same rules as the HyperFrames CLI.</span>
+          <span class="thumb thumb--code" aria-hidden="true"><Icon name="code" :size="22" /></span>
+          <span class="rail-text">
+            <span class="rail-name">Custom HTML</span>
+            <span class="rail-summary">Write or paste your own composition.</span>
+          </span>
         </button>
       </li>
     </ul>

@@ -46,7 +46,7 @@ export function composeTemplate(templateId, rawValues, aspect = '16:9') {
   if (!frame) throw new HttpError(400, `Unsupported aspect "${aspect}"`);
 
   const values = normalizeValues(template, rawValues);
-  const font = FONTS[values.font] ?? FONTS.archivo;
+  const font = FONTS[values.font] ?? FONTS.geist;
   const unit = Math.min(frame.width, frame.height) / 1080;
   const ctx = {
     ...frame,

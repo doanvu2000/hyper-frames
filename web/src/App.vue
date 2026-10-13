@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { api } from './lib/api.js';
+import { api, fileUrl } from './lib/api.js';
 import Icon from './components/Icon.vue';
 import TemplateRail from './components/TemplateRail.vue';
 import PreviewStage from './components/PreviewStage.vue';
@@ -10,7 +10,8 @@ import Inspector from './components/Inspector.vue';
 import RenderPanel from './components/RenderPanel.vue';
 import RenderList from './components/RenderList.vue';
 
-const DRAFT_KEY = 'hfs-draft';
+// v2: template defaults changed (Geist font); older drafts would pin the old typeface.
+const DRAFT_KEY = 'hfs-draft-v2';
 const POSTER_TIME = 2;
 
 const catalog = reactive({ templates: [], aspects: [] });
@@ -36,10 +37,14 @@ const submitting = ref(false);
 const renderError = ref('');
 
 const theme = ref(document.documentElement.dataset.theme ?? 'system');
+const thumbs = reactive({});
+const sideTab = ref('edit');
+const toasts = ref([]);
+let toastSeq = 0;
 
 const template = computed(() => catalog.templates.find((t) => t.id === templateId.value) ?? null);
 const values = computed(() => valuesByTemplate[templateId.value] ?? {});
-const queuedCount = computed(() => renders.value.filter((r) => r.status === 'queued').length);
+const runningJob = computed(() => renders.value.find((r) => r.status === 'running'));
 const sizeLabel = computed(() => `${info.width}×${info.height}`);
 
 function defaultsFor(t) {
@@ -190,6 +195,7 @@ async function submitRender(settings) {
         : { templateId: templateId.value, values: values.value, aspect: aspect.value, ...settings };
     const job = await api('/renders', { method: 'POST', body });
     upsert(job);
+    toast(`Rendering ${job.name}`, { label: 'View', run: () => (sideTab.value = 'renders') });
   } catch (err) {
     renderError.value = err.message;
   } finally {
@@ -199,8 +205,34 @@ async function submitRender(settings) {
 
 function upsert(job) {
   const i = renders.value.findIndex((r) => r.id === job.id);
+  const before = i === -1 ? null : renders.value[i].status;
   if (i === -1) renders.value = [job, ...renders.value];
   else renders.value.splice(i, 1, job);
+  if (before === job.status || (before !== 'running' && before !== 'queued')) return;
+  if (job.status === 'done') toast(`${job.name} is ready`, { label: 'Download', href: fileUrl(job.id) });
+  else if (job.status === 'failed') toast(`${job.name} failed to render`, { label: 'Details', run: () => (sideTab.value = 'renders') }, 'error');
+}
+
+function toast(text, action, tone = 'info') {
+  const id = ++toastSeq;
+  toasts.value = [...toasts.value.slice(-2), { id, text, action, tone }];
+  setTimeout(() => dismissToast(id), 6000);
+}
+function dismissToast(id) {
+  toasts.value = toasts.value.filter((t) => t.id !== id);
+}
+
+async function loadThumbs() {
+  await Promise.all(
+    catalog.templates.map(async (t) => {
+      try {
+        const res = await api('/compose', { method: 'POST', body: { templateId: t.id, values: valuesByTemplate[t.id], aspect: '16:9' } });
+        thumbs[t.id] = res.html;
+      } catch {
+        // A missing thumbnail leaves the card text-only.
+      }
+    }),
+  );
 }
 
 async function cancelRender(id) {
@@ -254,6 +286,7 @@ onMounted(async () => {
     for (const t of data.templates) valuesByTemplate[t.id] = defaultsFor(t);
     restoreDraft();
     scheduleCompose(0);
+    loadThumbs();
   } catch (err) {
     loadError.value = err.message;
   }
@@ -278,7 +311,7 @@ onBeforeUnmount(() => {
       </div>
       <p v-if="health" class="health" :data-ok="Boolean(health.ffmpeg)">
         <span class="health-dot" aria-hidden="true" />
-        <span v-if="health.ffmpeg">Render engine ready · hyperframes {{ health.hyperframes }}</span>
+        <span v-if="health.ffmpeg">Ready to render</span>
         <span v-else>FFmpeg not found. Install it and restart the server to render.</span>
       </p>
       <button type="button" class="icon-btn" :aria-label="`Theme: ${theme}. Change theme`" :title="`Theme: ${theme}`" @click="cycleTheme">
@@ -292,6 +325,7 @@ onBeforeUnmount(() => {
       <TemplateRail
         class="ws-rail"
         :templates="catalog.templates"
+        :thumbs="thumbs"
         :active-id="templateId"
         :mode="mode"
         @select="selectTemplate"
@@ -306,7 +340,36 @@ onBeforeUnmount(() => {
       </main>
 
       <aside class="ws-side">
-        <Inspector
+        <div class="tabs" role="tablist" aria-label="Side panel">
+          <button
+            id="tab-edit"
+            type="button"
+            role="tab"
+            class="tab"
+            :aria-selected="sideTab === 'edit'"
+            aria-controls="panel-edit"
+            @click="sideTab = 'edit'"
+          >
+            Edit
+          </button>
+          <button
+            id="tab-renders"
+            type="button"
+            role="tab"
+            class="tab"
+            :aria-selected="sideTab === 'renders'"
+            aria-controls="panel-renders"
+            @click="sideTab = 'renders'"
+          >
+            Renders
+            <span v-if="runningJob" class="tab-badge tab-badge--live">{{ Math.round(runningJob.progress) }}%</span>
+            <span v-else-if="renders.length" class="tab-badge">{{ renders.length }}</span>
+          </button>
+        </div>
+
+        <div class="side-body">
+          <div v-show="sideTab === 'edit'" id="panel-edit" role="tabpanel" aria-labelledby="tab-edit">
+            <Inspector
           :mode="mode"
           :template="template"
           :values="values"
@@ -319,16 +382,25 @@ onBeforeUnmount(() => {
           @aspect="(a) => (aspect = a)"
           @html="(v) => (customHtml = v)"
           @from-template="loadTemplateIntoEditor"
-        />
-        <RenderPanel
-          :disabled="!html || Boolean(loadError)"
-          :submitting="submitting"
-          :error="renderError"
-          :queued="queuedCount"
-          @submit="submitRender"
-        />
-        <RenderList :renders="renders" @cancel="cancelRender" @remove="removeRender" />
+            />
+          </div>
+          <div v-show="sideTab === 'renders'" id="panel-renders" role="tabpanel" aria-labelledby="tab-renders">
+            <RenderList :renders="renders" @cancel="cancelRender" @remove="removeRender" />
+          </div>
+        </div>
+
+        <RenderPanel :disabled="!html || Boolean(loadError)" :submitting="submitting" :error="renderError" @submit="submitRender" />
       </aside>
+    </div>
+  </div>
+
+  <div class="toasts" aria-live="polite">
+    <div v-for="t in toasts" :key="t.id" class="toast" :data-tone="t.tone">
+      <Icon :name="t.tone === 'error' ? 'alert' : 'check'" :size="16" />
+      <span class="toast-text">{{ t.text }}</span>
+      <a v-if="t.action?.href" class="toast-action" :href="t.action.href" download @click="dismissToast(t.id)">{{ t.action.label }}</a>
+      <button v-else-if="t.action" type="button" class="toast-action" @click="t.action.run(), dismissToast(t.id)">{{ t.action.label }}</button>
+      <button type="button" class="toast-close" aria-label="Dismiss" @click="dismissToast(t.id)"><Icon name="x" :size="14" /></button>
     </div>
   </div>
 </template>

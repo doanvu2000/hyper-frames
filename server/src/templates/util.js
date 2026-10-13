@@ -23,7 +23,7 @@ export const fontField = () => ({
   id: 'font',
   label: 'Typeface',
   type: 'select',
-  default: 'archivo',
+  default: 'geist',
   options: Object.entries(FONTS).map(([value, f]) => ({ value, label: f.label })),
 });
 

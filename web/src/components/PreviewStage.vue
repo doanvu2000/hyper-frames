@@ -79,7 +79,7 @@ onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <template>
-  <div ref="well" class="stage-well">
+  <div ref="well" class="stage-well" :style="{ '--frame-ratio': `${size.w} / ${size.h}` }">
     <div class="stage-frame" :style="{ width: `${size.w * scale}px`, height: `${size.h * scale}px` }">
       <iframe
         v-for="(doc, i) in docs"

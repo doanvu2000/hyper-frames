@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import Icon from './Icon.vue';
+import FieldControl from './FieldControl.vue';
 
 const props = defineProps({
   mode: { type: String, default: 'template' },
@@ -13,7 +14,12 @@ const props = defineProps({
 });
 const emit = defineEmits(['field', 'reset', 'aspect', 'html', 'from-template']);
 
-const HEX = /^#[0-9a-f]{6}$/i;
+const STYLE_TYPES = new Set(['color', 'select']);
+const isStyle = (f) => STYLE_TYPES.has(f.type) || f.id === 'duration';
+const contentFields = computed(() => props.template?.fields.filter((f) => !isStyle(f)) ?? []);
+const colorFields = computed(() => props.template?.fields.filter((f) => f.type === 'color') ?? []);
+const otherStyleFields = computed(() => props.template?.fields.filter((f) => isStyle(f) && f.type !== 'color') ?? []);
+
 const htmlProblem = computed(() => {
   if (props.mode !== 'html' || !props.html.trim()) return '';
   if (!/data-composition-id\s*=/.test(props.html)) return 'Add data-composition-id to the root element, or the renderer will not find the composition.';
@@ -21,12 +27,6 @@ const htmlProblem = computed(() => {
   return '';
 });
 
-const fieldId = (id) => `field-${id}`;
-function onHex(field, e) {
-  const v = e.target.value.trim();
-  if (HEX.test(v)) emit('field', field.id, v);
-  else e.target.value = props.values[field.id];
-}
 const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' };
 </script>
 
@@ -35,14 +35,13 @@ const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' }
     <template v-if="mode === 'template' && template">
       <div class="inspector-head">
         <h2 class="panel-title">{{ template.name }}</h2>
-        <button type="button" class="text-btn" @click="emit('reset')">
-          <Icon name="reset" :size="14" /> Reset fields
+        <button type="button" class="ghost-btn" @click="emit('reset')">
+          <Icon name="reset" :size="14" /> Reset
         </button>
       </div>
 
-      <fieldset class="field">
-        <legend class="field-label">Frame</legend>
-        <div class="segmented" role="radiogroup" aria-label="Frame">
+      <div class="group">
+        <div class="segmented" role="radiogroup" aria-label="Frame size">
           <button
             v-for="a in aspects"
             :key="a.id"
@@ -50,112 +49,56 @@ const aspectLabel = { '16:9': 'Landscape', '9:16': 'Portrait', '1:1': 'Square' }
             role="radio"
             class="segmented-item"
             :aria-checked="a.id === aspect"
+            :title="`${a.width}×${a.height}`"
             @click="emit('aspect', a.id)"
           >
             <span class="aspect-glyph" :data-aspect="a.id" aria-hidden="true" />
-            <span>{{ aspectLabel[a.id] ?? a.id }}</span>
-            <span class="segmented-sub">{{ a.width }}×{{ a.height }}</span>
+            {{ aspectLabel[a.id] ?? a.id }}
           </button>
         </div>
-      </fieldset>
+      </div>
 
-      <div v-for="f in template.fields" :key="f.id" class="field">
-        <label class="field-label" :for="fieldId(f.id)">{{ f.label }}</label>
+      <div class="group">
+        <h3 class="group-title">Content</h3>
+        <FieldControl v-for="f in contentFields" :key="f.id" :field="f" :value="values[f.id]" @update="(v) => emit('field', f.id, v)" />
+      </div>
 
-        <textarea
-          v-if="f.type === 'textarea'"
-          :id="fieldId(f.id)"
-          class="input input--area"
-          :rows="f.id === 'items' ? 5 : 3"
-          :maxlength="f.maxLength"
-          :value="values[f.id]"
-          @input="emit('field', f.id, $event.target.value)"
-        />
-
-        <div v-else-if="f.type === 'color'" class="color-row">
-          <input
-            :id="fieldId(f.id)"
-            type="color"
-            class="color-swatch"
-            :value="values[f.id]"
-            @input="emit('field', f.id, $event.target.value)"
-          />
-          <input
-            type="text"
-            class="input input--mono"
-            :aria-label="`${f.label} hex value`"
-            :value="values[f.id]"
-            maxlength="7"
-            spellcheck="false"
-            @change="onHex(f, $event)"
-          />
+      <div class="group">
+        <h3 class="group-title">Style</h3>
+        <div class="color-grid">
+          <FieldControl v-for="f in colorFields" :key="f.id" :field="f" :value="values[f.id]" @update="(v) => emit('field', f.id, v)" />
         </div>
-
-        <select
-          v-else-if="f.type === 'select'"
-          :id="fieldId(f.id)"
-          class="input"
-          :value="values[f.id]"
-          @change="emit('field', f.id, $event.target.value)"
-        >
-          <option v-for="o in f.options" :key="o.value" :value="o.value">{{ o.label }}</option>
-        </select>
-
-        <input
-          v-else-if="f.type === 'number'"
-          :id="fieldId(f.id)"
-          type="number"
-          inputmode="decimal"
-          class="input input--mono"
-          :min="f.min"
-          :max="f.max"
-          :step="f.step ?? 1"
-          :value="values[f.id]"
-          @input="emit('field', f.id, $event.target.value)"
-        />
-
-        <input
-          v-else
-          :id="fieldId(f.id)"
-          type="text"
-          class="input"
-          :maxlength="f.maxLength"
-          :value="values[f.id]"
-          @input="emit('field', f.id, $event.target.value)"
-        />
-
-        <p v-if="f.hint" class="field-hint">{{ f.hint }}</p>
-        <p v-else-if="f.type === 'number' && f.min !== undefined && f.id === 'duration'" class="field-hint">
-          {{ f.min }} to {{ f.max }} seconds.
-        </p>
+        <FieldControl v-for="f in otherStyleFields" :key="f.id" :field="f" :value="values[f.id]" @update="(v) => emit('field', f.id, v)" />
       </div>
     </template>
 
     <template v-else>
       <div class="inspector-head">
-        <h2 class="panel-title"><Icon name="code" :size="16" /> Composition HTML</h2>
-        <button type="button" class="text-btn" @click="emit('from-template')">
+        <h2 class="panel-title">Composition HTML</h2>
+        <button type="button" class="ghost-btn" @click="emit('from-template')">
           <Icon name="layers" :size="14" /> Start from template
         </button>
       </div>
       <p class="field-hint">
-        Frame size and length come from the root element's <code>data-width</code>, <code>data-height</code> and
-        <code>data-duration</code>.<span v-if="htmlSize"> Now: {{ htmlSize }}.</span>
+        Size and length come from <code>data-width</code>, <code>data-height</code> and <code>data-duration</code> on
+        the root element.<span v-if="htmlSize"> Now {{ htmlSize }}.</span>
       </p>
-      <label class="field-label" for="html-editor">Source</label>
-      <textarea
-        id="html-editor"
-        class="input input--code"
-        spellcheck="false"
-        autocapitalize="off"
-        autocomplete="off"
-        :value="html"
-        @input="emit('html', $event.target.value)"
-      />
+      <div class="field">
+        <label class="field-label" for="html-editor">Source</label>
+        <textarea
+          id="html-editor"
+          class="input input--code"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          :value="html"
+          @input="emit('html', $event.target.value)"
+        />
+      </div>
       <p v-if="htmlProblem" class="field-error" role="alert"><Icon name="alert" :size="14" /> {{ htmlProblem }}</p>
       <p class="field-hint">
-        Keep the timeline deterministic: no <code>Math.random()</code>, <code>Date.now()</code> or network calls in
-        scripts. Video and audio clips play only in the render, not in this preview.
+        Keep scripts deterministic: no <code>Math.random()</code>, <code>Date.now()</code> or network calls. Video and
+        audio play only in the render, not in this preview.
       </p>
     </template>
   </section>
