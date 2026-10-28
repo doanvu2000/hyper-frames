@@ -202,10 +202,11 @@ function buildServer({ client, hub, queue, projects, createRender, pushToStudio 
         format: z.enum(['mp4', 'webm', 'mov', 'gif']).default('mp4'),
         fps: z.union([z.literal(24), z.literal(25), z.literal(30), z.literal(50), z.literal(60)]).default(30),
         quality: z.enum(['draft', 'looks', 'delivery']).default('looks'),
+        range: z.object({ start: z.number().min(0), end: z.number().positive() }).optional().describe('Render only this part, in seconds.'),
       },
     },
     async (args) => {
-      const settings = { format: args.format, fps: args.fps, quality: args.quality, name: args.name };
+      const settings = { format: args.format, fps: args.fps, quality: args.quality, name: args.name, range: args.range };
       let job;
       if (args.html || args.html_path) {
         const source = await loadSource(args);

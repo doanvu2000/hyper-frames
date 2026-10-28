@@ -31,9 +31,10 @@ export class PreviewAudio {
     if (this.#gain) this.#gain.gain.value = this.muted ? 0 : this.volume ** 2;
   }
 
-  play(t) {
+  // rate scales both pitch and timing, like scrubbing tape; reverse playback stays silent.
+  play(t, rate = 1) {
     this.stop();
-    if (!this.#clips.length) return;
+    if (!this.#clips.length || rate <= 0) return;
     const ctx = this.#context();
     ctx.resume().catch(() => {});
     const session = this.#session;
@@ -43,16 +44,17 @@ export class PreviewAudio {
         .then((buffer) => {
           if (!buffer || session !== this.#session) return;
           const now = ctx.currentTime;
-          const cur = t + (now - anchorCtx);
+          const cur = t + (now - anchorCtx) * rate;
           const length = clip.duration ?? buffer.duration - clip.offset;
           if (clip.start + length <= cur) return;
           const late = Math.max(0, cur - clip.start);
           const source = ctx.createBufferSource();
           source.buffer = buffer;
+          source.playbackRate.value = rate;
           const gain = ctx.createGain();
           gain.gain.value = clip.volume;
           source.connect(gain).connect(this.#gain);
-          source.start(late > 0 ? now : anchorCtx + (clip.start - t), clip.offset + late, length - late);
+          source.start(late > 0 ? now : anchorCtx + (clip.start - t) / rate, clip.offset + late, length - late);
           this.#sources.push(source);
         })
         .catch(() => {});

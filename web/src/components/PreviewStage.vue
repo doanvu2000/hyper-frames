@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { withPreviewShim, readComposition } from '../lib/previewShim.js';
 import Icon from './Icon.vue';
 import { t } from '../lib/i18n.js';
@@ -11,6 +11,8 @@ const props = defineProps({
   error: { type: String, default: '' },
   base: { type: String, default: '' },
   playing: { type: Boolean, default: false },
+  zoom: { type: [String, Number], default: 'fit' },
+  overlay: { type: String, default: '' },
 });
 const emit = defineEmits(['ready', 'toggle']);
 
@@ -66,11 +68,24 @@ watch(
 function fit() {
   const el = well.value;
   if (!el) return;
-  const pad = window.matchMedia('(max-width: 640px)').matches ? 16 : 32;
+  if (props.zoom !== 'fit') {
+    scale.value = Number(props.zoom);
+    return;
+  }
+  const pad = window.matchMedia('(max-width: 640px)').matches ? 8 : 16;
   const aw = el.clientWidth - pad * 2;
   const ah = el.clientHeight - pad * 2;
   scale.value = Math.max(0.05, Math.min(aw / size.w, ah / size.h));
 }
+
+watch(() => props.zoom, fit);
+
+const SOCIAL = {
+  tiktok: { top: 9, bottom: 21, side: 15 },
+  reels: { top: 8, bottom: 24, side: 14 },
+  shorts: { top: 8, bottom: 19, side: 14 },
+};
+const social = computed(() => SOCIAL[props.overlay] ?? null);
 
 let observer;
 onMounted(() => {
@@ -82,7 +97,7 @@ onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <template>
-  <div ref="well" class="stage-well" :style="{ '--frame-ratio': `${size.w} / ${size.h}` }" @click.self="emit('toggle')">
+  <div ref="well" class="stage-well" :data-zoomed="zoom !== 'fit' ? '' : undefined" @click.self="emit('toggle')">
     <div class="stage-frame" :style="{ width: `${size.w * scale}px`, height: `${size.h * scale}px` }" @click="emit('toggle')">
       <iframe
         v-for="(doc, i) in docs"
@@ -97,10 +112,23 @@ onBeforeUnmount(() => observer?.disconnect());
         :style="{ width: `${size.w}px`, height: `${size.h}px`, transform: `scale(${scale})` }"
         @load="onLoad(i)"
       />
+      <div v-if="overlay === 'title'" class="safe-title" aria-hidden="true"><span /><span /></div>
+      <div
+        v-else-if="social"
+        class="safe-social"
+        aria-hidden="true"
+        :style="{ '--top': `${social.top}%`, '--bottom': `${social.bottom}%`, '--side': `${social.side}%` }"
+      >
+        <span class="safe-band safe-band--top" />
+        <span class="safe-band safe-band--bottom" />
+        <span class="safe-icons"><i /><i /><i /><i /></span>
+        <span class="safe-caption" />
+      </div>
       <span class="stage-hint" :data-playing="playing" aria-hidden="true">
         <Icon :name="playing ? 'pause' : 'play'" :size="26" />
       </span>
     </div>
+    <slot name="banner" />
     <p v-if="busy" class="stage-busy" role="status">
       <Icon name="loader" :size="14" class="spin" /> {{ t('preview.updating') }}
     </p>

@@ -11,6 +11,8 @@ import { generateComposition, MODEL, PROVIDERS } from './generate.js';
 import { StatusHub } from './status.js';
 import { CLIS, runCommand } from './cli.js';
 import { mountMcp } from './mcp.js';
+import { LibraryStore } from './library.js';
+import { snapshotFrames, checkComposition } from './inspect.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8787);
@@ -35,6 +37,7 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   });
 }
 const projects = new ProjectStore(path.join(DATA_ROOT, 'projects'));
+const library = new LibraryStore(path.join(DATA_ROOT, 'library'));
 const config = new Config(path.join(DATA_ROOT, 'config.json'));
 await config.load();
 const hub = new StatusHub({ config });
@@ -227,30 +230,138 @@ async function createRender(body, { origin, prepare: prepareSource } = {}) {
   if (!QUALITY.includes(quality)) throw new HttpError(400, `Quality must be one of ${QUALITY.join(', ')}.`);
   if (!OUTPUT_EXT[format]) throw new HttpError(400, `Format must be one of ${Object.keys(OUTPUT_EXT).join(', ')}.`);
 
-  let html, meta, name, prepare;
-  if (typeof body.html === 'string') {
-    if (body.html.length > MAX_HTML) throw new HttpError(413, 'The composition is larger than 1.5 MB. Move big assets out of the HTML.');
-    if (!/data-composition-id\s*=/.test(body.html)) {
-      throw new HttpError(400, 'The HTML needs a root element with data-composition-id. Start from a template to see the structure.');
-    }
-    html = body.html;
-    meta = { source: 'html', ...readRootMeta(html) };
-    const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
-    name = String(body.name || title || 'Custom composition').slice(0, 80);
-    if (body.projectId) {
-      if (!(await projects.exists(body.projectId))) throw new HttpError(404, 'The imported assets are gone. Import the files again before rendering.');
-      prepare = (dir) => projects.copyInto(body.projectId, dir);
-    } else {
-      prepare = prepareSource;
-    }
-  } else {
-    const composed = composeTemplate(body.templateId, body.values, body.aspect);
-    html = composed.html;
-    meta = { source: 'template', templateId: body.templateId, aspect: body.aspect, width: composed.width, height: composed.height, duration: composed.duration };
-    name = String(body.name || templateCatalog().find((t) => t.id === body.templateId)?.name || body.templateId).slice(0, 80);
-  }
+  const { html, meta, name, prepare } = await buildSource(body, prepareSource);
+  if (body.range != null) meta.range = readRange(body.range, meta.duration);
   if (origin) meta.origin = origin;
   return queue.enqueue({ html, name, meta, fps, quality, format, prepare });
+}
+
+async function buildSource(body, prepareSource) {
+  if (typeof body.html !== 'string') {
+    const composed = composeTemplate(body.templateId, body.values, body.aspect);
+    return {
+      html: composed.html,
+      meta: { source: 'template', templateId: body.templateId, aspect: body.aspect, width: composed.width, height: composed.height, duration: composed.duration },
+      name: String(body.name || templateCatalog().find((t) => t.id === body.templateId)?.name || body.templateId).slice(0, 80),
+      prepare: undefined,
+    };
+  }
+  const html = body.html;
+  if (html.length > MAX_HTML) throw new HttpError(413, 'The composition is larger than 1.5 MB. Move big assets out of the HTML.');
+  if (!/data-composition-id\s*=/.test(html)) {
+    throw new HttpError(400, 'The HTML needs a root element with data-composition-id. Start from a template to see the structure.');
+  }
+  let prepare = prepareSource;
+  if (body.projectId) {
+    if (!(await projects.exists(body.projectId))) throw new HttpError(404, 'The imported assets are gone. Import the files again before rendering.');
+    prepare = (dir) => projects.copyInto(body.projectId, dir);
+  }
+  return { html, meta: { source: 'html', ...readRootMeta(html) }, name: String(body.name || titleOf(html) || 'Custom composition').slice(0, 80), prepare };
+}
+
+function readRange(range, duration) {
+  const start = Number(range?.start);
+  const end = Number(range?.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) {
+    throw new HttpError(400, 'The in–out range needs a start and an end in seconds, with the start before the end.');
+  }
+  if (end - start < 0.1) throw new HttpError(400, 'The in–out range is shorter than 0.1 seconds. Move the out point further from the in point.');
+  if (duration && start >= duration) throw new HttpError(400, `The in point is past the end of the video (${duration}s). Move it earlier.`);
+  return { start, end };
+}
+
+// Chrome is heavy; snapshots and checks share one lane so at most one inspection browser runs.
+let inspectLane = Promise.resolve();
+function inspectInLane(fn) {
+  const run = inspectLane.catch(() => {}).then(fn);
+  inspectLane = run;
+  return run;
+}
+
+function asCompositionError(err) {
+  if (err instanceof HttpError) return err;
+  return new HttpError(422, err.message || 'The composition could not be inspected.');
+}
+
+app.post('/api/snapshot', async (req, res) => {
+  const body = req.body ?? {};
+  const time = Number(body.time);
+  if (body.time == null || !Number.isFinite(time) || time < 0) throw new HttpError(400, 'Give the frame time in seconds (0 or more).');
+  const { html, prepare } = await buildSource(body);
+  const frames = await inspectInLane(() => snapshotFrames(html, [time], { prepare })).catch((err) => {
+    throw asCompositionError(err);
+  });
+  const title = titleOf(html);
+  res.set({
+    'Content-Type': 'image/png',
+    'Content-Disposition': `attachment; filename="${title ? slug(title) : 'frame'}-${Math.round(time * 30)}.png"`,
+  });
+  res.send(Buffer.from(frames[0].data, 'base64'));
+});
+
+app.post('/api/check', async (req, res) => {
+  const body = req.body ?? {};
+  if (typeof body.html !== 'string') throw new HttpError(400, 'Send the composition HTML to check.');
+  const { html, prepare } = await buildSource({ html: body.html, projectId: body.projectId });
+  res.json(await inspectInLane(() => checkComposition(html, { prepare })).catch((err) => {
+    throw asCompositionError(err);
+  }));
+});
+
+app.get('/api/library', async (_req, res) => {
+  const docs = await library.list();
+  res.json({
+    docs: docs.map(({ id, name, createdAt, updatedAt, state, versions }) => ({
+      id,
+      name,
+      createdAt,
+      updatedAt,
+      mode: state.mode,
+      aspect: state.aspect,
+      templateId: state.templateId,
+      versionCount: versions.length,
+      thumbHtml: thumbHtml(state),
+    })),
+  });
+});
+
+app.post('/api/library', async (req, res) => {
+  res.status(201).json(await library.create(req.body ?? {}));
+});
+
+app.get('/api/library/:id', async (req, res) => {
+  res.json(await library.get(req.params.id));
+});
+
+app.put('/api/library/:id', async (req, res) => {
+  res.json(await library.update(req.params.id, req.body ?? {}));
+});
+
+// Imported asset folders are left alone: duplicates of this project may still point at them.
+app.delete('/api/library/:id', async (req, res) => {
+  await library.remove(req.params.id);
+  res.json({ ok: true });
+});
+
+app.post('/api/library/:id/duplicate', async (req, res) => {
+  res.status(201).json(await library.duplicate(req.params.id, req.body ?? {}));
+});
+
+app.post('/api/library/:id/versions', async (req, res) => {
+  res.status(201).json(await library.addVersion(req.params.id, req.body ?? {}));
+});
+
+app.get('/api/library/:id/versions/:versionId', async (req, res) => {
+  res.json(await library.getVersion(req.params.id, req.params.versionId));
+});
+
+function thumbHtml(state) {
+  if (state.mode === 'html') return state.html;
+  try {
+    return composeTemplate(state.templateId, state.values, state.aspect).html;
+  } catch {
+    return '';
+  }
 }
 
 mountMcp(app, {
@@ -316,6 +427,10 @@ function readRootMeta(html) {
   const root = html.match(/<[^>]*data-composition-id[^>]*>/)?.[0] ?? '';
   const attr = (name) => Number(root.match(new RegExp(`data-${name}="([\\d.]+)"`))?.[1]) || null;
   return { width: attr('width'), height: attr('height'), duration: attr('duration') };
+}
+
+function titleOf(html) {
+  return html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() || '';
 }
 
 function slug(text) {

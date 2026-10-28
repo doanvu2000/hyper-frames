@@ -14,6 +14,13 @@ export const OUTPUT_EXT = { mp4: 'mp4', webm: 'webm', mov: 'mov', gif: 'gif' };
 const PROGRESS_PREFIX = '@hf-progress ';
 const LOG_TAIL = 60;
 const FINISHED = new Set(['done', 'failed', 'cancelled']);
+const AV = ['-map', '0:v?', '-map', '0:a?'];
+const TRIM_ARGS = {
+  mp4: [...AV, '-c:v', 'libx264', '-crf', '16', '-preset', 'medium', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart'],
+  webm: [...AV, '-c:v', 'libvpx-vp9', '-crf', '24', '-b:v', '0', '-pix_fmt', 'yuva420p', '-c:a', 'libopus'],
+  mov: [...AV, '-c:v', 'prores_ks', '-profile:v', '4', '-pix_fmt', 'yuva444p10le', '-c:a', 'pcm_s16le'],
+  gif: ['-filter_complex', '[0:v]split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=sierra2_4a', '-loop', '0'],
+};
 
 export class RenderQueue extends EventEmitter {
   constructor(dataDir) {
@@ -92,8 +99,7 @@ export class RenderQueue extends EventEmitter {
   async remove(id) {
     const job = this.jobs.get(id);
     if (!job) return false;
-    const running = this.active?.id === id ? this.active.child : null;
-    const closed = running ? new Promise((resolve) => running.once('close', resolve)) : null;
+    const closed = this.active?.id === id ? this.active.settled : null;
     await this.cancel(id);
     if (closed) await closed;
     this.jobs.delete(id);
@@ -126,7 +132,8 @@ export class RenderQueue extends EventEmitter {
       windowsHide: true,
       detached: process.platform !== 'win32',
     });
-    this.active = { id: job.id, child };
+    let settle;
+    this.active = { id: job.id, child, settled: new Promise((resolve) => (settle = resolve)) };
     Object.assign(job, { status: 'running', stage: 'starting', startedAt: new Date().toISOString() });
     this.#persist(job);
     this.#emit(job);
@@ -143,20 +150,55 @@ export class RenderQueue extends EventEmitter {
     child.on('error', (err) => job.log.push(`spawn error: ${err.message}`));
     child.on('close', async (code) => {
       if (buffer) this.#onLine(job, buffer);
-      this.active = null;
       if (job.cancelRequested) {
         await this.#finish(job, { status: 'cancelled' });
       } else if (code === 0) {
         const stat = await fs.stat(this.filePath(job)).catch(() => null);
-        await this.#finish(
-          job,
-          stat ? { status: 'done', progress: 100, stage: 'done', size: stat.size } : { status: 'failed', error: 'The render finished but no output file was written.' },
-        );
+        if (!stat) await this.#finish(job, { status: 'failed', error: 'The render finished but no output file was written.' });
+        else if (job.range) await this.#trim(job).catch((err) => this.#finish(job, { status: 'failed', error: `Cutting the in–out range failed: ${err.message}` }));
+        else await this.#finish(job, { status: 'done', progress: 100, stage: 'done', size: stat.size });
       } else {
         await this.#finish(job, { status: 'failed', error: summarizeFailure(job.log, code) });
       }
+      this.active = null;
+      settle();
       this.#next();
     });
+  }
+
+  // The CLI has no start/end option, so the full composition is rendered and cut here. Re-encoding
+  // (not stream copy) keeps the cut frame-accurate instead of snapping to keyframes.
+  async #trim(job) {
+    const { start, end } = job.range;
+    const output = this.filePath(job);
+    const temp = path.join(path.dirname(output), `trim.${OUTPUT_EXT[job.format]}`);
+    Object.assign(job, { stage: 'trim' });
+    this.#emit(job);
+    const args = ['-hide_banner', '-y', '-ss', String(start), '-i', output, '-t', String(end - start), ...TRIM_ARGS[job.format], temp];
+    const result = await new Promise((resolve) => {
+      if (job.cancelRequested) return resolve({ cancelled: true });
+      const child = spawn('ffmpeg', args, { windowsHide: true, detached: process.platform !== 'win32' });
+      this.active.child = child;
+      let stderr = '';
+      let done = false;
+      const finish = (res) => !done && (done = true) && resolve(res);
+      child.stderr.on('data', (c) => (stderr = (stderr + c).slice(-4000)));
+      child.on('error', (err) => finish({ code: -1, tail: err.code === 'ENOENT' ? 'ffmpeg was not found on PATH.' : err.message }));
+      child.on('close', (code) => finish({ code, tail: stderr.trim().split(/\r?\n/).at(-1) ?? '' }));
+    });
+    if (job.cancelRequested || result.cancelled) {
+      await fs.rm(temp, { force: true });
+      return this.#finish(job, { status: 'cancelled' });
+    }
+    if (result.code !== 0) {
+      await fs.rm(temp, { force: true });
+      return this.#finish(job, { status: 'failed', error: `Cutting the in–out range failed: ${result.tail || `ffmpeg exited with code ${result.code}.`}` });
+    }
+    await fs.rename(temp, output);
+    const stat = await fs.stat(output);
+    const patch = { status: 'done', progress: 100, stage: 'done', size: stat.size };
+    if (job.duration) patch.duration = Math.round(Math.min(end - start, job.duration - start) * 100) / 100;
+    await this.#finish(job, patch);
   }
 
   #onLine(job, raw) {

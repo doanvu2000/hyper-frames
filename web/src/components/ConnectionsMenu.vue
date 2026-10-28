@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
+import Popover from './Popover.vue';
 import Icon from './Icon.vue';
 import { api } from '../lib/api.js';
 import { connectionState, mostUrgent } from '../lib/connections.js';
@@ -11,8 +12,6 @@ const props = defineProps({
 });
 const emit = defineEmits(['status']);
 
-const open = ref(false);
-const root = ref(null);
 const busy = ref('');
 const error = ref('');
 
@@ -30,6 +29,7 @@ const triggerText = computed(() => {
   if (ACTIVE.has(lead.value.state.key)) return `${lead.value.conn.label} · ${lead.value.state.label}`;
   return readyCount.value ? t('conn.someReady', { n: readyCount.value }) : t('conn.noneReady');
 });
+const inUse = (conn) => props.status?.provider === conn.id;
 
 async function refresh() {
   error.value = '';
@@ -54,86 +54,56 @@ async function setMcp(conn, connected) {
     busy.value = '';
   }
 }
-
-function onDocPointer(e) {
-  if (open.value && root.value && !root.value.contains(e.target)) open.value = false;
-}
-function onKey(e) {
-  if (e.key === 'Escape' && open.value) {
-    open.value = false;
-    root.value?.querySelector('.conn-trigger')?.focus();
-  }
-}
-onMounted(() => {
-  document.addEventListener('pointerdown', onDocPointer);
-  document.addEventListener('keydown', onKey);
-});
-onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onDocPointer);
-  document.removeEventListener('keydown', onKey);
-});
 </script>
 
 <template>
-  <div ref="root" class="conn-menu">
-    <button
-      type="button"
-      class="conn-trigger"
-      :aria-expanded="open"
-      aria-controls="conn-panel"
-      :title="lead?.state.detail ?? t('conn.menu')"
-      @click="open = !open"
-    >
+  <Popover :label="t('conn.menu')" :title="lead?.state.detail ?? t('conn.menu')" role="dialog" align="end" trigger-class="chip" panel-class="pop--conn">
+    <template #trigger>
       <span class="state-dot" :data-state="lead?.state.key ?? 'checking'" aria-hidden="true" />
-      <span class="conn-trigger-text">{{ triggerText }}</span>
-      <Icon name="chevron-down" :size="14" />
-    </button>
+      <span class="chip-text">{{ triggerText }}</span>
+    </template>
 
-    <div v-if="open" id="conn-panel" class="conn-panel" role="dialog" :aria-label="t('conn.menu')">
-      <div class="conn-panel-head">
-        <h2 class="panel-title">{{ t('conn.menu') }}</h2>
-        <button type="button" class="ghost-btn" :disabled="busy === 'refresh' || status?.checking" @click="refresh">
-          <Icon name="refresh" :size="14" :class="{ spin: busy === 'refresh' || status?.checking }" /> {{ t('conn.checkAgain') }}
+    <div class="pop-lbl">{{ t('conn.sources') }}</div>
+    <div v-for="{ conn, state } in rows" :key="conn.id" class="conn-row">
+      <span class="state-dot" :data-state="state.key" aria-hidden="true" />
+      <span class="pop-text">
+        {{ conn.label }}<span v-if="conn.version" class="conn-version"> v{{ conn.version }}</span>
+        <small>{{ state.detail ?? state.label }}</small>
+        <small v-if="conn.mcp && !conn.available && conn.installed && conn.checked">{{ t('conn.signIn') }} <code>{{ conn.login }}</code></small>
+      </span>
+      <span class="conn-side">
+        <span v-if="inUse(conn)" class="conn-inuse">{{ t('conn.inUse') }}</span>
+        <span v-else class="conn-state">{{ state.label }}</span>
+      </span>
+    </div>
+
+    <div class="pop-sep" />
+    <div class="pop-lbl">{{ t('conn.howtoTitle') }}</div>
+    <template v-for="{ conn } in rows" :key="`mcp-${conn.id}`">
+      <div v-if="conn.mcp && conn.available" class="conn-row conn-row--mcp">
+        <Icon name="plug" :size="15" />
+        <span class="pop-text">{{ conn.mcp.registered ? t('conn.addedTo', { app: conn.app }) : t('conn.addTo', { app: conn.app }) }}</span>
+        <button
+          v-if="conn.mcp.registered"
+          type="button"
+          class="text-btn"
+          :disabled="busy === conn.id"
+          @click="setMcp(conn, false)"
+        >
+          {{ t('conn.remove') }}
+        </button>
+        <button v-else type="button" class="text-btn text-btn--strong" :disabled="busy === conn.id" @click="setMcp(conn, true)">
+          <Icon v-if="busy === conn.id" name="loader" :size="14" class="spin" /> {{ t('conn.add') }}
         </button>
       </div>
+    </template>
+    <p class="pop-foot" v-html="tr('conn.howto', { example: t('guide.example') })" />
 
-      <ul class="conn-list">
-        <li v-for="{ conn, state } in rows" :key="conn.id" class="conn">
-          <div class="conn-head">
-            <span class="conn-name">{{ conn.label }}</span>
-            <span v-if="conn.version" class="conn-version">v{{ conn.version }}</span>
-            <span class="state-pill" :data-state="state.key">
-              <span class="state-dot" :data-state="state.key" aria-hidden="true" />{{ state.label }}
-            </span>
-          </div>
-          <p v-if="state.detail" class="conn-detail">{{ state.detail }}</p>
-          <p v-if="conn.mcp && conn.available && conn.detail !== state.detail" class="conn-sub">{{ conn.detail }}</p>
-
-          <div v-if="conn.mcp && conn.available" class="conn-mcp">
-            <span v-if="conn.mcp.registered" class="conn-mcp-text"><Icon name="plug" :size="14" /> {{ t('conn.addedTo', { app: conn.app }) }}</span>
-            <button
-              v-if="conn.mcp.registered"
-              type="button"
-              class="text-btn"
-              :disabled="busy === conn.id"
-              @click="setMcp(conn, false)"
-            >
-              {{ t('conn.remove') }}
-            </button>
-            <button v-else type="button" class="text-btn conn-add" :disabled="busy === conn.id" @click="setMcp(conn, true)">
-              <Icon :name="busy === conn.id ? 'loader' : 'plug'" :size="14" :class="{ spin: busy === conn.id }" /> {{ t('conn.addTo', { app: conn.app }) }}
-            </button>
-          </div>
-          <p v-else-if="conn.mcp && conn.installed && conn.checked" class="conn-sub">{{ t('conn.signIn') }} <code>{{ conn.login }}</code></p>
-        </li>
-      </ul>
-
-      <p v-if="error" class="field-error" role="alert"><Icon name="alert" :size="14" /> {{ error }}</p>
-
-      <div class="conn-howto">
-        <p class="group-title">{{ t('conn.howtoTitle') }}</p>
-        <p class="field-hint" v-html="tr('conn.howto', { example: t('guide.example') })" />
-      </div>
-    </div>
-  </div>
+    <p v-if="error" class="field-error" role="alert"><Icon name="alert" :size="14" /> {{ error }}</p>
+    <div class="pop-sep" />
+    <button type="button" class="pop-item" :disabled="busy === 'refresh' || status?.checking" @click="refresh">
+      <Icon name="refresh" :size="15" :class="{ spin: busy === 'refresh' || status?.checking }" />
+      <span class="pop-text">{{ t('conn.checkAgain') }}</span>
+    </button>
+  </Popover>
 </template>

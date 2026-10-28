@@ -1,5 +1,8 @@
 import { ref } from 'vue';
 import { MESSAGES } from './messages.js';
+import { STUDIO_MESSAGES } from './messages-studio.js';
+
+for (const code of Object.keys(STUDIO_MESSAGES)) Object.assign(MESSAGES[code], STUDIO_MESSAGES[code]);
 
 const KEY = 'hfs-locale';
 export const LOCALES = ['vi', 'en'];

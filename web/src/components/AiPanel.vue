@@ -15,7 +15,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['generated', 'ai-updated']);
 
-const examples = computed(() => [t('ai.example1'), t('ai.example2'), t('ai.example3')]);
+const examples = computed(() => [1, 2, 3, 4].map((n) => ({ label: t(`ai.chip${n}`), text: t(`ai.example${n}`) })));
 const SOURCE_LABEL = { api: 'API key', 'claude-cli': 'Claude CLI', 'codex-cli': 'Codex CLI' };
 const BUTTON_LABEL = { api: 'Claude API', 'claude-cli': 'Claude CLI', 'codex-cli': 'Codex CLI' };
 
@@ -125,7 +125,7 @@ async function generate() {
         const event = JSON.parse(line);
         if (event.type === 'phase') phase.value = event.phase;
         else if (event.type === 'delta') written.value += event.text;
-        else if (event.type === 'done') emit('generated', event.html, used);
+        else if (event.type === 'done') emit('generated', event.html, used, prompt.value.trim(), revise.value);
         else if (event.type === 'error') throw new Error(event.error);
       }
     }
@@ -147,10 +147,9 @@ onBeforeUnmount(() => clearInterval(ticker));
 </script>
 
 <template>
-  <div class="group ai">
-    <div class="ai-head">
-      <h3 class="group-title"><Icon name="sparkles" :size="14" /> {{ t('ai.title') }}</h3>
-      <button v-if="provider === 'api' && ai?.ready && !editingKey" type="button" class="ghost-btn" @click="editingKey = true">{{ t('ai.apiKey') }}</button>
+  <div class="ai">
+    <div v-if="provider === 'api' && ai?.ready && !editingKey" class="ai-head">
+      <button type="button" class="ghost-btn" @click="editingKey = true">{{ t('ai.apiKey') }}</button>
     </div>
 
     <div class="field">
@@ -214,31 +213,53 @@ onBeforeUnmount(() => clearInterval(ticker));
           @keydown.meta.enter="prompt.trim() && !streaming && generate()"
         />
       </div>
-      <div v-if="!prompt" class="ai-examples">
-        <button v-for="ex in examples" :key="ex" type="button" class="ai-example" @click="prompt = ex">{{ ex }}</button>
+      <div class="ai-examples">
+        <button v-for="ex in examples" :key="ex.label" type="button" class="ai-example" :title="ex.text" @click="prompt = ex.text">{{ ex.label }}</button>
       </div>
 
-      <div class="ai-options">
-        <div class="field">
-          <label class="field-label" for="ai-aspect">{{ t('ai.frame') }}</label>
-          <select id="ai-aspect" v-model="aspect" class="input" :disabled="revise || streaming">
-            <option v-for="a in aspects" :key="a.id" :value="a.id">{{ t(`aspect.${a.id}`) }} · {{ a.width }}×{{ a.height }}</option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="field-label" for="ai-length">{{ t('ai.length') }}</label>
-          <input id="ai-length" v-model.number="duration" type="number" min="2" max="60" step="1" class="input input--mono" :disabled="revise || streaming" />
+      <div v-if="currentHtml.trim()" class="field">
+        <span id="ai-mode-label" class="field-label">{{ t('ai.mode') }}</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="ai-mode-label">
+          <button type="button" role="radio" class="segmented-item" :aria-checked="!revise" :disabled="streaming" @click="revise = false">{{ t('ai.modeNew') }}</button>
+          <button type="button" role="radio" class="segmented-item" :aria-checked="revise" :disabled="streaming" @click="revise = true">{{ t('ai.modeRevise') }}</button>
         </div>
       </div>
-      <label v-if="currentHtml.trim()" class="check">
-        <input v-model="revise" type="checkbox" :disabled="streaming" />
-        <span>{{ t('ai.revise') }}</span>
-      </label>
 
-      <button v-if="!streaming" type="button" class="secondary-btn" :disabled="!prompt.trim() || Boolean(status?.generation)" @click="generate">
+      <template v-if="!revise">
+        <div class="field">
+          <span id="ai-aspect-label" class="field-label">{{ t('ai.frame') }}</span>
+          <div class="aspects" role="radiogroup" aria-labelledby="ai-aspect-label">
+            <button
+              v-for="a in aspects"
+              :key="a.id"
+              type="button"
+              role="radio"
+              class="aspect-btn"
+              :aria-checked="aspect === a.id"
+              :disabled="streaming"
+              :title="`${a.width}×${a.height}`"
+              @click="aspect = a.id"
+            >
+              <span class="aspect-glyph" :data-aspect="a.id" aria-hidden="true" />
+              {{ a.id }}
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <span id="ai-length-label" class="field-label">{{ t('ai.length') }}</span>
+          <div class="stepper" role="group" aria-labelledby="ai-length-label">
+            <button type="button" class="stepper-btn" :aria-label="t('ai.shorter')" :disabled="streaming || duration <= 2" @click="duration = Math.max(2, duration - 1)">−</button>
+            <input v-model.number="duration" type="number" min="2" max="60" step="1" class="stepper-input" :aria-label="t('ai.length')" :disabled="streaming" @change="duration = Math.min(60, Math.max(2, Math.round(duration || 6)))" />
+            <span class="stepper-unit">{{ t('ai.seconds') }}</span>
+            <button type="button" class="stepper-btn" :aria-label="t('ai.longer')" :disabled="streaming || duration >= 60" @click="duration = Math.min(60, duration + 1)">+</button>
+          </div>
+        </div>
+      </template>
+
+      <button v-if="!streaming" type="button" class="btn btn--line btn--block" :disabled="!prompt.trim() || Boolean(status?.generation)" @click="generate">
         <Icon name="sparkles" :size="16" /> {{ t(revise ? 'ai.reviseWith' : 'ai.generateWith', { source: BUTTON_LABEL[provider] }) }}
       </button>
-      <button v-else type="button" class="secondary-btn" @click="stop">
+      <button v-else type="button" class="btn btn--line btn--block" @click="stop">
         <Icon name="stop" :size="14" /> {{ t('ai.stop') }}
       </button>
       <p v-if="streaming" class="ai-progress" role="status">

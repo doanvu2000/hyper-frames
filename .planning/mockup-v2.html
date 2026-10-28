@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames Studio v2 — mockup</title>
+<style>
+:root {
+  --bay: #e9e9ec; --deck: #ffffff; --deck-2: #f4f4f6; --deck-3: #eaeaee;
+  --ink: #1b1c1f; --ink-2: #61636b; --ink-3: #8b8d94;
+  --line: rgb(0 0 0 / .09); --line-2: rgb(0 0 0 / .16);
+  --amber: #f5b83d; --amber-ink: #8a5a00; --amber-on: #1b1400; --amber-soft: rgb(245 184 61 / .18);
+  --tally: #d92a1c; --tally-soft: rgb(217 42 28 / .12);
+  --go: #1e8e4e; --go-soft: rgb(30 142 78 / .12);
+  --well: #0a0a0b; --well-2: #151517; --well-3: #1e1f22; --well-line: rgb(255 255 255 / .07);
+  --well-ink: #e6e7ea; --well-muted: #8a8c93;
+  --clip: #3a4150; --clip-hi: #59627a; --audio: #2f5a4a;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  --r-panel: 10px; --r-ctl: 7px; --r-mon: 4px; --r-pop: 10px;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --pop: 0 0 0 .5px rgb(0 0 0 / .12), 0 18px 50px rgb(0 0 0 / .22);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) {
+  --bay: #141517; --deck: #1c1d20; --deck-2: #25262a; --deck-3: #2e2f34;
+  --ink: #ecedef; --ink-2: #9b9da4; --ink-3: #6d6f76;
+  --line: rgb(255 255 255 / .07); --line-2: rgb(255 255 255 / .14);
+  --amber-ink: #f5b83d; --tally: #ff4d3d; --tally-soft: rgb(255 77 61 / .16); --go: #3ddc84; --go-soft: rgb(61 220 132 / .14);
+  --pop: 0 0 0 .5px rgb(255 255 255 / .1), 0 18px 50px rgb(0 0 0 / .6);
+  color-scheme: dark;
+} }
+:root[data-theme='dark'] {
+  --bay: #141517; --deck: #1c1d20; --deck-2: #25262a; --deck-3: #2e2f34;
+  --ink: #ecedef; --ink-2: #9b9da4; --ink-3: #6d6f76;
+  --line: rgb(255 255 255 / .07); --line-2: rgb(255 255 255 / .14);
+  --amber-ink: #f5b83d; --tally: #ff4d3d; --tally-soft: rgb(255 77 61 / .16); --go: #3ddc84; --go-soft: rgb(61 220 132 / .14);
+  --pop: 0 0 0 .5px rgb(255 255 255 / .1), 0 18px 50px rgb(0 0 0 / .6);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { background: var(--bay); color: var(--ink); font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.app { display: grid; grid-template-rows: 48px minmax(0, 1fr); width: 100vw; height: 100dvh; overflow: hidden; }
+.top { min-width: 0; overflow: hidden; }
+
+/* topbar */
+.top { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--deck); }
+.mark { width: 26px; height: 26px; border-radius: 7px; background: var(--well); display: grid; place-items: center; }
+.mark i { width: 0; height: 0; border-left: 8px solid var(--amber); border-top: 5px solid transparent; border-bottom: 5px solid transparent; margin-left: 2px; }
+.proj { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 0; border-radius: var(--r-ctl); background: none; }
+.proj:hover { background: var(--deck-2); }
+.proj b { font-weight: 600; }
+.proj span { color: var(--ink-2); }
+.ib { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: var(--r-ctl); background: none; color: var(--ink-2); }
+.ib:hover { background: var(--deck-2); color: var(--ink); }
+.ib[disabled] { opacity: .4; cursor: default; }
+.sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+.grow { flex: 1; }
+.chip { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 10px; border-radius: 999px; border: 0; background: var(--deck-2); color: var(--ink-2); white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--go); }
+.chip--rec { background: var(--tally-soft); color: var(--tally); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chip--rec .dot { background: var(--tally); animation: tally 1.4s ease-in-out infinite; }
+@keyframes tally { 50% { opacity: .35; } }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: var(--r-ctl); border: 0; background: var(--deck-2); font-weight: 600; white-space: nowrap; }
+.btn:hover { background: var(--deck-3); }
+.btn--go { background: var(--amber); color: var(--amber-on); }
+.btn--go:hover { background: #ffc85a; }
+.btn--line { background: none; box-shadow: inset 0 0 0 1px var(--line-2); }
+.btn--block { width: 100%; height: 38px; }
+
+/* workspace */
+.ws { display: grid; grid-template-columns: 64px minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1fr) clamp(132px, 24dvh, 240px); min-height: 0; min-width: 0; }
+.rail, .insp { grid-row: 1 / -1; min-height: 0; }
+.rail { grid-column: 1; }
+.insp { grid-column: 3; }
+.center { grid-column: 2; grid-row: 1; min-height: 0; }
+[data-panel] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.rail { display: flex; flex-direction: column; gap: 2px; padding: 8px 6px; border-right: 1px solid var(--line); background: var(--deck); }
+.rail button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 6px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); font-size: 10.5px; }
+.rail button svg { width: 20px; height: 20px; }
+.rail button:hover { background: var(--deck-2); color: var(--ink); }
+.rail button[aria-current='true'] { color: var(--ink); background: var(--deck-2); }
+.rail button[aria-current='true']::before { content: ''; position: absolute; left: -6px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--amber); }
+.rail .badge { position: absolute; top: 4px; right: 8px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--tally); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 16px; }
+.rail .push { margin-top: auto; }
+
+.center { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; background: var(--well); }
+.monitor { position: relative; display: grid; padding: 42px 20px 14px; min-height: 0; }
+.fit { container-type: size; display: grid; place-items: center; min-height: 0; min-width: 0; }
+.mon-tools { position: absolute; top: 8px; left: 12px; right: 12px; display: flex; align-items: center; gap: 6px; color: var(--well-muted); }
+.wchip { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border-radius: 6px; border: 0; background: var(--well-3); color: var(--well-ink); font-size: 12px; }
+.wchip:hover { background: #2a2b2f; }
+.wchip[aria-pressed='true'] { background: var(--amber-soft); color: var(--amber); }
+.frame { position: relative; width: min(100cqw, 100cqh * 16 / 9); aspect-ratio: 16 / 9; background: #0e1116; border-radius: var(--r-mon); box-shadow: 0 0 0 1px var(--well-line); overflow: hidden; container-type: inline-size; }
+.comp { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2.2cqw; padding: 0 9cqw; color: #fff; }
+.comp i { width: 5cqw; height: .45cqw; background: #3d5afe; }
+.comp small { color: #6f86ff; letter-spacing: .3em; font-size: 1.4cqw; font-weight: 600; text-transform: uppercase; }
+.comp h2 { margin: 0; font: 800 6.2cqw/1.02 var(--font); letter-spacing: -.03em; max-width: 60cqw; }
+.comp p { margin: 0; font-size: 1.9cqw; color: #c9cdd6; }
+.safe { position: absolute; inset: 0; pointer-events: none; display: none; }
+.safe[data-on='title'] { display: block; }
+.safe[data-on='title']::before, .safe[data-on='title']::after { content: ''; position: absolute; border: 1px dashed rgb(245 184 61 / .7); }
+.safe[data-on='title']::before { inset: 5%; }
+.safe[data-on='title']::after { inset: 10%; border-color: rgb(245 184 61 / .4); }
+.frame--tall { aspect-ratio: 9 / 16; width: min(100cqw, 100cqh * 9 / 16); }
+.social { position: absolute; inset: 0; display: none; pointer-events: none; }
+.social.on { display: block; }
+.social .rside { position: absolute; right: 3%; bottom: 18%; display: flex; flex-direction: column; gap: 14px; }
+.social .rside b { width: 26px; height: 26px; border-radius: 50%; background: rgb(255 255 255 / .28); }
+.social .cap { position: absolute; left: 4%; right: 22%; bottom: 7%; height: 9%; border-radius: 4px; background: rgb(255 255 255 / .16); }
+.social .shade { position: absolute; left: 0; right: 0; bottom: 0; height: 24%; background: rgb(245 184 61 / .12); border-top: 1px dashed rgb(245 184 61 / .7); }
+.social .shade-top { position: absolute; left: 0; right: 0; top: 0; height: 9%; background: rgb(245 184 61 / .12); border-bottom: 1px dashed rgb(245 184 61 / .7); }
+
+.transport { display: flex; align-items: center; gap: 4px; padding: 8px 12px; flex-wrap: nowrap; border-top: 1px solid var(--well-line); background: var(--well-2); color: var(--well-ink); }
+.tb { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--well-ink); }
+.tb:hover { background: var(--well-3); }
+.tb--play { width: 40px; height: 40px; border-radius: 50%; background: var(--amber); color: var(--amber-on); margin: 0 4px; }
+.tb--play:hover { background: #ffc85a; }
+.tb--play svg { fill: currentColor; stroke: none; width: 18px; height: 18px; }
+.tc { font: 600 22px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--amber); margin: 0 6px 0 10px; letter-spacing: -.02em; }
+.tc-of { font: 13px var(--mono); color: var(--well-muted); }
+.tmeta { color: var(--well-muted); font-size: 12px; margin-left: 12px; }
+.tsel { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 6px 0 10px; border-radius: 6px; border: 0; background: var(--well-3); color: var(--well-ink); font: 600 12px var(--mono); }
+.tsel:hover, .tsel[aria-expanded='true'] { background: #2a2b2f; }
+
+/* dropdown: one popover style everywhere; the trigger keeps the look of the bar it sits in */
+.dd { position: relative; display: inline-flex; }
+.dd-chev { width: 14px; height: 14px; opacity: .7; transition: transform .16s var(--ease); }
+[aria-expanded='true'] > .dd-chev { transform: rotate(180deg); }
+.wchip[aria-expanded='true'] { background: #2a2b2f; }
+.chip[aria-expanded='true'] { background: var(--deck-3); color: var(--ink); }
+.pop { position: absolute; z-index: 45; top: calc(100% + 6px); left: 0; min-width: 232px; max-width: calc(100vw - 24px); padding: 4px; border-radius: var(--r-pop); background: var(--deck); color: var(--ink); box-shadow: var(--pop); display: none; font: 13px/1.35 var(--font); }
+.pop.on { display: block; animation: drop .16s var(--ease); }
+.dd[data-up] .pop { top: auto; bottom: calc(100% + 6px); animation-name: rise; }
+.dd[data-align='end'] .pop { left: auto; right: 0; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.pop [role='option'], .pop [role='menuitem'] { display: grid; grid-template-columns: 16px 1fr auto; gap: 8px; align-items: center; width: 100%; min-height: 32px; padding: 6px 8px; border: 0; border-radius: 6px; background: none; text-align: left; color: var(--ink); white-space: nowrap; }
+.pop [role='option']:hover, .pop [role='menuitem']:hover { background: var(--deck-2); }
+.pop [role='option']:focus-visible, .pop [role='menuitem']:focus-visible { outline: none; background: var(--deck-2); box-shadow: inset 0 0 0 1.5px var(--amber); }
+.pop .ck { visibility: hidden; color: var(--amber-ink); }
+.pop [aria-selected='true'] { font-weight: 600; }
+.pop [aria-selected='true'] .ck { visibility: visible; }
+.pop small { display: block; color: var(--ink-2); font-size: 11.5px; font-weight: 400; }
+.pop .st-txt { color: var(--ink-2); font-size: 12px; }
+.pop .dot { justify-self: center; }
+.pop .dot--off { background: var(--ink-3); }
+.pop-lbl { padding: 8px 8px 4px; color: var(--ink-3); font-size: 11.5px; }
+.pop-sep { height: 1px; background: var(--line); margin: 4px; }
+.inout { display: inline-flex; gap: 2px; }
+.inout .tb { width: auto; padding: 0 8px; font: 600 11px var(--mono); }
+.inout .tb[aria-pressed='true'] { color: var(--amber); }
+
+/* timeline */
+.timeline { grid-column: 2; grid-row: 2; min-height: 0; min-width: 0; overflow: hidden; background: var(--well); border-top: 1px solid var(--well-line); color: var(--well-muted); display: grid; grid-template-columns: 140px minmax(0, 1fr); grid-template-rows: 26px minmax(0, 1fr); font-size: 11.5px; }
+.names, .lanes { display: grid; grid-auto-rows: minmax(0, 1fr); min-height: 0; }
+.tl-corner { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-right: 1px solid var(--well-line); border-bottom: 1px solid var(--well-line); }
+.ruler { position: relative; border-bottom: 1px solid var(--well-line); background: var(--well-2); }
+.ruler span { position: absolute; top: 6px; font: 10.5px var(--mono); transform: translateX(4px); }
+.ruler span::before { content: ''; position: absolute; left: -4px; top: -6px; height: 26px; width: 1px; background: var(--well-line); }
+.inout-range { position: absolute; top: 0; bottom: 0; background: rgb(245 184 61 / .08); border-left: 2px solid var(--amber); border-right: 2px solid var(--amber); pointer-events: none; }
+.marker { position: absolute; top: 2px; width: 10px; height: 12px; background: #6fc3ff; clip-path: polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%); transform: translateX(-5px); }
+.names { border-right: 1px solid var(--well-line); overflow: hidden; }
+.names div, .lane { min-height: 0; display: flex; align-items: center; border-bottom: 1px solid var(--well-line); }
+.names div { padding: 0 12px; gap: 8px; color: var(--well-ink); font-family: var(--mono); font-size: 11px; }
+.names div em { font-style: normal; color: var(--well-muted); margin-left: auto; }
+.lanes { position: relative; overflow: hidden; }
+.lane { position: relative; }
+.clip { position: absolute; top: 22%; height: 56%; max-height: 18px; border-radius: 3px; background: var(--clip); box-shadow: inset 0 0 0 1px var(--clip-hi); }
+.clip--sel { background: #4b5675; box-shadow: inset 0 0 0 1.5px var(--amber); }
+.clip--audio { background: var(--audio); box-shadow: none; display: flex; align-items: center; gap: 1px; padding: 0 3px; overflow: hidden; }
+.clip--audio b { flex: 1; background: #66c9a2; border-radius: 1px; }
+.playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--amber); pointer-events: none; z-index: 2; }
+.ph-tag { position: absolute; top: 5px; z-index: 2; transform: translateX(-50%); padding: 1px 5px; border-radius: 3px; background: var(--amber); color: var(--amber-on); font: 700 10px var(--mono); }
+
+/* inspector */
+.insp { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-left: 1px solid var(--line); background: var(--deck); }
+.insp-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; }
+.insp-head h2 { margin: 0; font-size: 14px; font-weight: 650; }
+.seg { display: flex; padding: 2px; border-radius: 8px; background: var(--deck-2); }
+.seg button { flex: 1; height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: none; color: var(--ink-2); font-weight: 550; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.seg button[aria-pressed='true'] { background: var(--deck); color: var(--ink); box-shadow: 0 0 0 .5px var(--line-2), 0 1px 2px rgb(0 0 0 / .08); }
+.seg .dot { width: 6px; height: 6px; }
+.insp-body { flex: 1; overflow: auto; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.insp-body > * { flex: none; }
+.insp-body > .ver-wrap { flex: 1 1 0; min-height: 96px; display: flex; flex-direction: column; }
+/* column-wrap pushes rows that do not fit fully into a clipped second column, so no row is ever cut in half */
+.ver-wrap .versions { flex: 1 1 0; min-height: 0; overflow: hidden; flex-wrap: wrap; align-content: flex-start; }
+.ver-wrap .ver { width: 100%; }
+.ver-all { align-self: flex-start; margin-top: 4px; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--amber-ink); font-weight: 600; }
+.ver-all:hover { background: var(--deck-2); }
+.insp-body > .code { flex: 1 1 0; min-height: 0; overflow: hidden; }
+@media (max-height: 780px) { .ideas { display: none !important; } textarea.prompt { min-height: 76px; } }
+@media (max-height: 720px) { textarea.prompt { min-height: 56px; height: 56px; } .insp-body { gap: 10px; } .aspects button { padding: 5px 0 4px; } .seg + .hint { display: none; } }
+.field label, .lbl { display: block; font-weight: 600; margin-bottom: 6px; }
+.hint { color: var(--ink-2); font-size: 12px; margin: 6px 0 0; }
+textarea.prompt { width: 100%; min-height: 104px; resize: vertical; padding: 10px 12px; border-radius: var(--r-ctl); border: 1px solid var(--line-2); background: var(--deck-2); line-height: 1.5; }
+.ideas { display: flex; flex-wrap: wrap; gap: 6px; }
+.ideas button { border: 0; border-radius: 999px; padding: 5px 10px; background: var(--deck-2); color: var(--ink-2); font-size: 12px; }
+.ideas button:hover { color: var(--ink); background: var(--deck-3); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+.aspects { display: flex; gap: 6px; }
+.aspects button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 0 6px; border: 1px solid var(--line-2); border-radius: var(--r-ctl); background: none; color: var(--ink-2); font-size: 11.5px; }
+.aspects button i { border: 1.5px solid currentColor; border-radius: 2px; }
+.aspects button[aria-pressed='true'] { border-color: var(--amber); color: var(--ink); background: var(--amber-soft); }
+.num { display: flex; align-items: center; height: 34px; border-radius: var(--r-ctl); border: 1px solid var(--line-2); background: var(--deck-2); padding: 0 10px; justify-content: space-between; }
+.num b { font-variant-numeric: tabular-nums; }
+.divider { height: 1px; background: var(--line); margin: 2px -14px; }
+
+.versions { display: flex; flex-direction: column; }
+.ver { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px 6px; border-radius: 8px; }
+.ver:hover { background: var(--deck-2); }
+.ver .th { width: 44px; height: 25px; border-radius: 3px; background: #0e1116; box-shadow: 0 0 0 1px var(--line); position: relative; overflow: hidden; }
+.ver .th::after { content: ''; position: absolute; left: 6px; top: 9px; width: 22px; height: 3px; background: #c9cdd6; box-shadow: 0 5px 0 #6f86ff; }
+.ver p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ver small { color: var(--ink-2); }
+.ver .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--amber-soft); color: var(--amber-ink); font-weight: 600; }
+.ver .acts { display: none; gap: 2px; }
+.ver:hover .acts { display: flex; }
+.ver:hover .tag { display: none; }
+
+/* code editor */
+.code { border-radius: var(--r-ctl); background: var(--well); color: #d6d8de; font: 12px/1.65 var(--mono); padding: 8px 0; overflow: hidden; }
+.code div { display: grid; grid-template-columns: 34px 1fr; white-space: pre; }
+.code div span:first-child { color: #555861; text-align: right; padding-right: 10px; }
+.code .err { background: rgb(255 77 61 / .12); box-shadow: inset 2px 0 0 #ff4d3d; }
+.code .msg { display: block; grid-template-columns: none; margin: 0 8px 4px 34px; padding: 4px 8px; border-radius: 4px; background: #2a1715; color: #ff9a90; white-space: normal; font-family: var(--font); }
+.t { color: #ff9e64; } .a { color: #7dcfff; } .s { color: #9ece6a; } .k { color: #bb9af7; }
+
+/* renders */
+.rj { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.rj .th { width: 64px; height: 36px; border-radius: 4px; background: #0e1116; }
+.rj .th.tall { width: 20px; height: 36px; margin: 0 22px; }
+.rj p { margin: 0; font-weight: 600; }
+.rj small { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.bar { height: 4px; border-radius: 2px; background: var(--deck-3); margin-top: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--tally); }
+.st { font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+.st--rec { color: var(--tally); } .st--ok { color: var(--go); } .st--q { color: var(--ink-2); }
+
+/* overlays */
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .45); display: none; z-index: 40; }
+.scrim.on { display: block; }
+.sheet { position: fixed; z-index: 41; top: 56px; right: 12px; width: min(420px, calc(100vw - 24px)); border-radius: 12px; background: var(--deck); box-shadow: var(--pop); display: none; flex-direction: column; max-height: calc(100dvh - 72px); }
+.sheet.on { display: flex; animation: drop .2s var(--ease); }
+@keyframes drop { from { opacity: 0; transform: translateY(-6px); } }
+.sheet header { display: flex; align-items: center; padding: 14px 16px 4px; }
+.sheet header h3 { margin: 0; font-size: 15px; flex: 1; }
+.sheet .body { padding: 8px 16px 16px; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pills button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: none; color: var(--ink-2); font-weight: 550; }
+.pills button[aria-pressed='true'] { border-color: var(--amber); background: var(--amber-soft); color: var(--ink); }
+.pills button[aria-pressed='true']::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+.sum { display: flex; justify-content: space-between; padding: 10px 12px; border-radius: 8px; background: var(--deck-2); color: var(--ink-2); }
+.sum b { color: var(--ink); }
+.check { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+.check input { accent-color: var(--amber); width: 16px; height: 16px; }
+
+.menu { position: fixed; z-index: 41; top: 48px; left: 40px; width: 320px; border-radius: var(--r-pop); background: var(--deck); box-shadow: var(--pop); padding: 4px; display: none; }
+.menu.on { display: block; animation: drop .2s var(--ease); }
+.menu .pj { display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 6px; border: 0; border-radius: 6px; background: none; text-align: left; }
+.menu .pj:hover, .menu .pj[aria-current='true'] { background: var(--deck-2); }
+.menu .pj .th { width: 56px; height: 32px; border-radius: 3px; }
+.menu .pj p { margin: 0; font-weight: 600; }
+.menu .pj small { color: var(--ink-2); }
+.menu hr { border: 0; height: 1px; background: var(--line); margin: 4px; }
+.menu .mi { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; padding: 0 8px; border: 0; border-radius: 6px; background: none; text-align: left; color: var(--ink-2); }
+.menu .mi:hover { background: var(--deck-2); color: var(--ink); }
+
+.palette { position: fixed; z-index: 41; top: 14vh; left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); border-radius: 12px; background: var(--deck); box-shadow: var(--pop); display: none; overflow: hidden; }
+.palette.on { display: block; animation: drop .18s var(--ease); }
+.palette .q { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 50px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+.palette .q input { flex: 1; border: 0; background: none; font-size: 15px; outline: none; color: var(--ink); }
+.palette ul { list-style: none; margin: 0; padding: 6px; max-height: 360px; overflow: auto; }
+.palette li { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 7px; color: var(--ink); }
+.palette li:first-of-type { background: var(--amber-soft); }
+.palette li span { flex: 1; }
+.palette .grp { height: auto; padding: 8px 10px 4px; color: var(--ink-3); font-size: 11.5px; background: none !important; }
+kbd { font: 11px var(--mono); padding: 2px 6px; border-radius: 4px; background: var(--deck-2); color: var(--ink-2); box-shadow: inset 0 -1px 0 var(--line-2); }
+
+.note { position: fixed; z-index: 30; right: 12px; bottom: 12px; display: flex; gap: 6px; padding: 6px; border-radius: 10px; background: var(--deck); box-shadow: var(--pop); font-size: 12px; align-items: center; }
+.note b { padding: 0 6px; color: var(--ink-2); font-weight: 600; }
+
+[hidden] { display: none !important; }
+
+@media (max-width: 1400px) { .tmeta { display: none; } }
+@media (max-width: 1100px) { .ws { grid-template-columns: 64px minmax(0, 1fr) 320px; } .tc-of, .inout { display: none; } }
+@media (max-width: 820px) {
+  .ws { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .center { grid-column: 1; grid-row: 1; }
+  .insp { grid-column: 1; grid-row: 2; }
+  .rail { grid-column: 1; grid-row: 3; }
+  .fit { height: 28dvh; }
+  .monitor { padding: 40px 12px 10px; }
+  .insp, .center, .timeline { min-width: 0; }
+  .top { gap: 2px; }
+  #cmdBtn, .top [title='Hướng dẫn'] { display: none; }
+  #exportBtn { padding: 0 10px; }
+  .proj b { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seg button { padding: 0 6px; }
+  .rail { flex-direction: row; justify-content: space-around; border: 0; border-top: 1px solid var(--line); z-index: 5; }
+  .rail .push { display: none; }
+  .rail button[aria-current='true']::before { left: 12px; right: 12px; top: -8px; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  .insp { border: 0; }
+  .top .chip, .top .sep, .proj span, #undo, #redo { display: none; }
+  .timeline { display: none; }
+  .transport { flex-wrap: wrap; row-gap: 2px; }
+  .note { display: none; }
+  .menu { left: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+  <symbol id="layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></symbol>
+  <symbol id="history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
+  <symbol id="code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+  <symbol id="redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.6c0 1.7-2.4 2.2-2.4 3.9M12 17h.01"/></symbol>
+  <symbol id="moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="export" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></symbol>
+  <symbol id="prev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="start" viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6z"/></symbol>
+  <symbol id="loop" viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></symbol>
+  <symbol id="vol" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+  <symbol id="full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="safe" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><rect x="6.5" y="8" width="11" height="8" stroke-dasharray="2 2"/></symbol>
+  <symbol id="flag" viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="compare" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M12 3v18"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="cmd" viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></symbol>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <span class="mark" aria-hidden="true"><i></i></span>
+    <button class="proj" id="projBtn" aria-haspopup="true"><b>Tempo — intro</b><span>đã lưu</span><svg class="i"><use href="#chev"/></svg></button>
+    <span class="sep"></span>
+    <button class="ib" id="undo" title="Hoàn tác (Ctrl+Z)" aria-label="Hoàn tác"><svg class="i"><use href="#undo"/></svg></button>
+    <button class="ib" id="redo" title="Làm lại (Ctrl+Shift+Z)" aria-label="Làm lại" disabled><svg class="i"><use href="#redo"/></svg></button>
+    <span class="grow"></span>
+    <div class="dd" data-align="end">
+      <button class="chip" aria-haspopup="menu" aria-expanded="false"><span class="dot"></span>AI · 2 sẵn sàng<svg class="i dd-chev"><use href="#chev"/></svg></button>
+      <div class="pop" role="menu" aria-label="Kết nối AI" style="min-width:300px">
+        <div class="pop-lbl">Nguồn model khi tạo video</div>
+        <button role="menuitem"><span class="dot"></span><span>Claude CLI<small>Đã đăng nhập · gói Team</small></span><span class="st-txt">Đang dùng</span></button>
+        <button role="menuitem"><span class="dot"></span><span>Codex CLI<small>Đã đăng nhập · ChatGPT Plus</small></span><span class="st-txt">Sẵn sàng</span></button>
+        <button role="menuitem"><span class="dot dot--off"></span><span>API key<small>Chưa nhập key Anthropic</small></span><span class="st-txt">Thêm key</span></button>
+        <div class="pop-sep"></div>
+        <div class="pop-lbl">Điều khiển Studio từ terminal (MCP)</div>
+        <button role="menuitem"><span></span><span>Thêm vào Claude Code</span><span class="st-txt">Đã thêm</span></button>
+        <button role="menuitem"><span></span><span>Thêm vào Codex</span></button>
+        <div class="pop-sep"></div>
+        <button role="menuitem"><span></span><span>Kiểm tra lại kết nối</span></button>
+      </div>
+    </div>
+    <button class="chip chip--rec" data-rail="renders" title="Hàng đợi render"><span class="dot"></span>Đang render 42%</button>
+    <span class="sep"></span>
+    <button class="ib" id="cmdBtn" title="Lệnh (Ctrl+K)" aria-label="Mở bảng lệnh"><svg class="i"><use href="#cmd"/></svg></button>
+    <button class="ib" title="Hướng dẫn" aria-label="Hướng dẫn"><svg class="i"><use href="#help"/></svg></button>
+    <button class="ib" id="themeBtn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện"><svg class="i"><use href="#moon"/></svg></button>
+    <button class="btn btn--go" id="exportBtn"><svg class="i"><use href="#export"/></svg>Xuất video</button>
+  </header>
+
+  <div class="ws">
+    <nav class="rail" aria-label="Công cụ">
+      <button data-rail="ai" aria-current="true"><svg class="i"><use href="#spark"/></svg>Tạo AI</button>
+      <button data-rail="code"><svg class="i"><use href="#code"/></svg>HTML</button>
+      <button data-rail="tpl"><svg class="i"><use href="#layers"/></svg>Template</button>
+      <button data-rail="assets"><svg class="i"><use href="#image"/></svg>Asset</button>
+      <button data-rail="renders"><svg class="i"><use href="#film"/></svg>Render<span class="badge">3</span></button>
+      <button data-rail="history" class="push"><svg class="i"><use href="#history"/></svg>Lịch sử</button>
+    </nav>
+
+    <section class="center" aria-label="Màn hình xem trước">
+      <div class="monitor">
+        <div class="mon-tools">
+          <div class="dd" id="safeDd">
+            <button class="wchip" aria-haspopup="listbox" aria-expanded="false" aria-label="Lớp phủ vùng an toàn"><svg class="i"><use href="#safe"/></svg><span class="dd-val">Không lớp phủ</span><svg class="i dd-chev"><use href="#chev"/></svg></button>
+            <div class="pop" role="listbox" aria-label="Lớp phủ vùng an toàn">
+              <button role="option" data-value="" aria-selected="true"><svg class="i ck"><use href="#check"/></svg><span>Không lớp phủ</span></button>
+              <div class="pop-sep"></div>
+              <div class="pop-lbl">Truyền hình</div>
+              <button role="option" data-value="title" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>Title / action safe<small>Khung 90% và 80%</small></span></button>
+              <div class="pop-lbl">Mạng xã hội · khung 9:16</div>
+              <button role="option" data-value="tiktok" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>TikTok</span><kbd>Shift S</kbd></button>
+              <button role="option" data-value="reels" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>Instagram Reels</span></button>
+              <button role="option" data-value="shorts" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>YouTube Shorts</span></button>
+            </div>
+          </div>
+          <div class="dd">
+            <button class="wchip" aria-haspopup="listbox" aria-expanded="false" aria-label="Thu phóng"><span class="dd-val">Vừa khung</span><svg class="i dd-chev"><use href="#chev"/></svg></button>
+            <div class="pop" role="listbox" aria-label="Thu phóng" style="min-width:180px">
+              <button role="option" aria-selected="true"><svg class="i ck"><use href="#check"/></svg><span>Vừa khung</span><kbd>Shift F</kbd></button>
+              <div class="pop-sep"></div>
+              <button role="option" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>50%</span></button>
+              <button role="option" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>100%</span><kbd>Shift 1</kbd></button>
+              <button role="option" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>200%</span></button>
+            </div>
+          </div>
+          <span class="grow"></span>
+          <button class="wchip" title="Chụp frame hiện tại ra PNG"><svg class="i"><use href="#cam"/></svg>Chụp PNG</button>
+        </div>
+        <div class="fit"><div class="frame" id="frame">
+          <div class="comp" id="comp"><i></i><small>Chapter two</small><h2>Make motion from markup</h2><p>HTML in, video out.</p></div>
+          <div class="safe" id="safe"></div>
+          <div class="social" id="social"><div class="shade-top"></div><div class="shade"></div><div class="rside"><b></b><b></b><b></b><b></b></div><div class="cap"></div></div>
+        </div></div>
+      </div>
+      <div class="transport">
+        <button class="tb" title="Về đầu (Home)" aria-label="Về đầu"><svg class="i"><use href="#start"/></svg></button>
+        <button class="tb" title="Lùi 1 frame (←)" aria-label="Lùi 1 frame"><svg class="i"><use href="#prev"/></svg></button>
+        <button class="tb tb--play" title="Phát (Space · L)" aria-label="Phát"><svg class="i"><use href="#play"/></svg></button>
+        <button class="tb" title="Tới 1 frame (→)" aria-label="Tới 1 frame"><svg class="i"><use href="#next"/></svg></button>
+        <span class="tc">00:02:00</span><span class="tc-of">/ 00:06:00</span>
+        <span class="tmeta">Frame 60 · 1920×1080 · 30 fps</span>
+        <span class="grow"></span>
+        <span class="inout"><button class="tb" aria-pressed="true" title="Đặt điểm vào (I)">I 00:01:00</button><button class="tb" aria-pressed="true" title="Đặt điểm ra (O)">O 00:04:15</button></span>
+        <button class="tb" title="Lặp đoạn in–out" aria-label="Lặp" style="color:var(--amber)"><svg class="i"><use href="#loop"/></svg></button>
+        <div class="dd" data-up data-align="end">
+          <button class="tsel" aria-haspopup="listbox" aria-expanded="false" aria-label="Tốc độ phát"><span class="dd-val">1×</span><svg class="i dd-chev"><use href="#chev"/></svg></button>
+          <div class="pop" role="listbox" aria-label="Tốc độ phát" style="min-width:210px">
+            <div class="pop-lbl">Tốc độ xem trước</div>
+            <button role="option" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>0.25×</span></button>
+            <button role="option" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>0.5×</span></button>
+            <button role="option" aria-selected="true"><svg class="i ck"><use href="#check"/></svg><span>1×</span><kbd>K</kbd></button>
+            <button role="option" aria-selected="false"><svg class="i ck"><use href="#check"/></svg><span>2×</span><kbd>L L</kbd></button>
+            <div class="pop-sep"></div>
+            <div class="pop-lbl" style="white-space:normal">Chỉ đổi tốc độ xem, không đổi video xuất ra.</div>
+          </div>
+        </div>
+        <button class="tb" title="Thêm marker (M)" aria-label="Thêm marker"><svg class="i"><use href="#flag"/></svg></button>
+        <button class="tb" title="Âm lượng" aria-label="Âm lượng"><svg class="i"><use href="#vol"/></svg></button>
+        <button class="tb" title="Toàn màn hình (F)" aria-label="Toàn màn hình"><svg class="i"><use href="#full"/></svg></button>
+      </div>
+    </section>
+
+    <aside class="insp" aria-label="Bảng thuộc tính">
+      <!-- AI -->
+      <div data-panel="ai">
+        <div class="insp-head"><h2>Tạo bằng AI</h2></div>
+        <div class="insp-body">
+          <div>
+            <span class="lbl">Model</span>
+            <div class="seg"><button aria-pressed="false">API key</button><button aria-pressed="true"><span class="dot"></span>Claude CLI</button><button aria-pressed="false"><span class="dot"></span>Codex CLI</button></div>
+            <p class="hint">Đã đăng nhập tài khoản Claude · gói Team</p>
+          </div>
+          <div class="field">
+            <label for="p">Mô tả video</label>
+            <textarea id="p" class="prompt">Intro 5 giây cho app nghe nhạc Tempo: nền gradient tím, chữ logo nảy vào, khẩu hiệu "Nghe mọi nhịp, không cần mạng".</textarea>
+            <div class="ideas" style="margin-top:8px">
+              <button>Đếm ngược ra mắt</button><button>3 tính năng app</button><button>Lower third phỏng vấn</button><button>Số liệu tăng trưởng</button>
+            </div>
+          </div>
+          <div>
+            <span class="lbl">Khung hình</span>
+            <div class="aspects">
+              <button aria-pressed="true"><i style="width:22px;height:13px"></i>16:9</button>
+              <button aria-pressed="false"><i style="width:10px;height:17px"></i>9:16</button>
+              <button aria-pressed="false"><i style="width:15px;height:15px"></i>1:1</button>
+            </div>
+          </div>
+          <div class="row">
+            <div><span class="lbl">Độ dài</span><div class="num"><span>−</span><b>6 giây</b><span>+</span></div></div>
+            <div><span class="lbl">Chế độ</span><div class="seg"><button aria-pressed="false">Mới</button><button aria-pressed="true">Sửa bản này</button></div></div>
+          </div>
+          <button class="btn btn--line btn--block"><svg class="i"><use href="#spark"/></svg>Tạo phiên bản mới</button>
+          <div class="divider"></div>
+          <div class="ver-wrap">
+            <span class="lbl">Phiên bản</span>
+            <div class="versions">
+              <div class="ver"><span class="th"></span><div><p>Chữ to hơn, nảy chậm lại</p><small>Claude · 2 phút trước</small></div><span class="tag">Đang xem</span><span class="acts"></span></div>
+              <div class="ver"><span class="th"></span><div><p>Thêm khẩu hiệu dưới logo</p><small>Claude · 9 phút trước</small></div><span class="acts"><button class="ib" title="So sánh A/B" aria-label="So sánh"><svg class="i"><use href="#compare"/></svg></button><button class="ib" title="Khôi phục" aria-label="Khôi phục"><svg class="i"><use href="#undo"/></svg></button></span></div>
+              <div class="ver"><span class="th"></span><div><p>Sửa tay HTML (12 dòng)</p><small>Bạn · 14 phút trước</small></div><span class="acts"><button class="ib" aria-label="So sánh"><svg class="i"><use href="#compare"/></svg></button><button class="ib" aria-label="Khôi phục"><svg class="i"><use href="#undo"/></svg></button></span></div>
+              <div class="ver"><span class="th"></span><div><p>Intro 5 giây cho app Tempo…</p><small>Claude · 21 phút trước</small></div><span class="acts"><button class="ib" aria-label="So sánh"><svg class="i"><use href="#compare"/></svg></button><button class="ib" aria-label="Khôi phục"><svg class="i"><use href="#undo"/></svg></button></span></div>
+            </div>
+            <button class="ver-all" data-rail="history">Xem tất cả 4 phiên bản</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HTML -->
+      <div data-panel="code" hidden>
+        <div class="insp-head"><h2>HTML</h2><span class="grow"></span><button class="btn btn--line" style="height:28px">Lấy từ template</button></div>
+        <div class="insp-body">
+          <div class="code">
+            <div><span>12</span><span><span class="t">&lt;div</span> <span class="a">id</span>=<span class="s">"scene"</span> <span class="a">data-start</span>=<span class="s">"0"</span><span class="t">&gt;</span></span></div>
+            <div><span>13</span><span>  <span class="t">&lt;h1</span> <span class="a">class</span>=<span class="s">"tc-head"</span><span class="t">&gt;</span>Make motion<span class="t">&lt;/h1&gt;</span></span></div>
+            <div class="err"><span>14</span><span>  <span class="t">&lt;audio</span> <span class="a">src</span>=<span class="s">"sfx/pop.ogg"</span> <span class="a">data-start</span>=<span class="s">"1.2"</span><span class="t">&gt;</span></span></div>
+            <div class="msg">Thiếu data-track-index: audio này phát chồng với music/bgm.ogg, cần track khác.</div>
+            <div><span>15</span><span><span class="t">&lt;/div&gt;</span></span></div>
+            <div><span>16</span><span><span class="t">&lt;script&gt;</span></span></div>
+            <div><span>17</span><span>  <span class="k">const</span> tl = gsap.timeline({ paused: <span class="k">true</span> });</span></div>
+            <div><span>18</span><span>  tl.from(<span class="s">'.tc-head'</span>, { y: <span class="s">40</span>, opacity: <span class="s">0</span> }, <span class="s">0.3</span>);</span></div>
+          </div>
+          <p class="hint">Ctrl+F tìm · Ctrl+H thay · lỗi kiểm tra tự chạy khi ngừng gõ.</p>
+        </div>
+      </div>
+
+      <!-- renders -->
+      <div data-panel="renders" hidden>
+        <div class="insp-head"><h2>Bản render</h2><span class="grow"></span><span class="hint" style="margin:0">3 đang chạy / chờ</span></div>
+        <div class="insp-body" style="gap:0">
+          <div class="rj"><span class="th"></span><div><p>Tempo — intro · MP4</p><small class="st st--rec"><span class="dot" style="background:var(--tally)"></span>Đang render 42% · còn ~11 giây</small><div class="bar"><i style="width:42%"></i></div></div><button class="ib" aria-label="Huỷ"><svg class="i"><use href="#x"/></svg></button></div>
+          <div class="rj"><span class="th tall"></span><div><p>Tempo — intro · 9:16 MP4</p><small class="st st--q">Chờ · thứ 2</small></div><button class="ib" aria-label="Huỷ"><svg class="i"><use href="#x"/></svg></button></div>
+          <div class="rj"><span class="th" style="width:36px;margin:0 14px"></span><div><p>Tempo — intro · 1:1 MP4</p><small class="st st--q">Chờ · thứ 3</small></div><button class="ib" aria-label="Huỷ"><svg class="i"><use href="#x"/></svg></button></div>
+          <div class="rj"><span class="th"></span><div><p>Launch countdown · GIF</p><small class="st st--ok">Xong · 2,4 MB · 6 giây</small></div><button class="btn" style="height:28px">Tải</button></div>
+        </div>
+      </div>
+
+      <div data-panel="tpl" hidden><div class="insp-head"><h2>Template</h2></div><div class="insp-body"><p class="hint">Lưới thumbnail template + trường sửa nhanh (giữ như v1, đổi sang token mới).</p></div></div>
+      <div data-panel="assets" hidden><div class="insp-head"><h2>Asset</h2></div><div class="insp-body"><p class="hint">Ô kéo thả folder + cây file đã import (img/, sfx/, music/, fonts/), bấm để chèn đường dẫn vào HTML.</p></div></div>
+      <div data-panel="history" hidden><div class="insp-head"><h2>Lịch sử</h2></div><div class="insp-body"><p class="hint">Toàn bộ phiên bản của project (AI + sửa tay), lọc theo nguồn, so sánh A/B hai bản bất kỳ.</p></div></div>
+    </aside>
+
+    <section class="timeline" aria-label="Timeline">
+      <div class="tl-corner">Lớp · 6</div>
+      <div class="ruler" id="ruler">
+        <div class="inout-range" style="left:16.66%;width:54.1%"></div>
+        <span class="ph-tag" style="left:33.3%">00:02:00</span>
+        <span class="marker" style="left:25%" title="Logo vào"></span>
+        <span class="marker" style="left:58%" title="Khẩu hiệu"></span>
+      </div>
+      <div class="names">
+        <div>.tc-bar</div><div>.tc-eyebrow</div><div>.tc-head <em>×4</em></div><div>.tc-sub</div><div>#scene</div><div style="color:#66c9a2">♪ bgm.ogg</div>
+      </div>
+      <div class="lanes">
+        <div class="playhead" style="left:33.3%"></div>
+        <div class="lane"><span class="clip" style="left:2%;width:10%"></span></div>
+        <div class="lane"><span class="clip" style="left:5%;width:8%"></span></div>
+        <div class="lane"><span class="clip clip--sel" style="left:8%;width:17%"></span></div>
+        <div class="lane"><span class="clip" style="left:20%;width:10%"></span></div>
+        <div class="lane"><span class="clip" style="left:89%;width:10%"></span></div>
+        <div class="lane"><span class="clip clip--audio" style="left:0;width:100%" id="wave"></span></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+
+
+<div class="scrim" id="scrim"></div>
+
+<div class="menu" id="projMenu" role="menu">
+  <button class="pj" aria-current="true"><span class="th" style="background:#0e1116"></span><span><p>Tempo — intro</p><small>16:9 · 6 giây · sửa 2 phút trước</small></span></button>
+  <button class="pj"><span class="th" style="background:#1d1030"></span><span><p>Launch countdown</p><small>9:16 · 5 giây · hôm qua</small></span></button>
+  <button class="pj"><span class="th" style="background:#10261c"></span><span><p>Báo cáo Q3</p><small>1:1 · 8 giây · 3 ngày trước</small></span></button>
+  <hr />
+  <button class="mi"><svg class="i"><use href="#plus"/></svg>Project mới</button>
+  <button class="mi"><svg class="i"><use href="#copy"/></svg>Nhân bản project này</button>
+  <button class="mi">Đổi tên…</button>
+</div>
+
+<div class="sheet" id="exportSheet" role="dialog" aria-label="Xuất video">
+  <header><h3>Xuất video</h3><button class="ib" data-close aria-label="Đóng"><svg class="i"><use href="#x"/></svg></button></header>
+  <div class="body">
+    <div><span class="lbl">Khung hình</span>
+      <div class="pills"><button aria-pressed="true">16:9 · 1920×1080</button><button aria-pressed="true">9:16 · 1080×1920</button><button aria-pressed="true">1:1 · 1080×1080</button></div>
+      <p class="hint">Bản 9:16 và 1:1 dựng lại bố cục theo khung, không cắt từ 16:9.</p>
+    </div>
+    <div><span class="lbl">Định dạng</span>
+      <div class="pills"><button aria-pressed="true">MP4</button><button aria-pressed="false">WebM</button><button aria-pressed="false">MOV</button><button aria-pressed="false">GIF</button></div>
+    </div>
+    <div><span class="lbl">Đoạn</span>
+      <div class="seg"><button aria-pressed="false">Cả video · 6 giây</button><button aria-pressed="true">In–out · 00:01:00–00:04:15</button></div>
+    </div>
+    <div class="row">
+      <div><span class="lbl">FPS</span><div class="seg"><button aria-pressed="false">24</button><button aria-pressed="true">30</button><button aria-pressed="false">60</button></div></div>
+      <div><span class="lbl">Chất lượng</span><div class="seg"><button aria-pressed="false">Nháp</button><button aria-pressed="true">Chuẩn</button><button aria-pressed="false">Cao</button></div></div>
+    </div>
+    <label class="check"><input type="checkbox" checked /> Báo trên máy khi render xong</label>
+    <div class="sum"><span>3 file · 3,5 giây mỗi file</span><b>~35 giây render</b></div>
+    <button class="btn btn--go btn--block"><svg class="i"><use href="#export"/></svg>Xuất 3 video</button>
+  </div>
+</div>
+
+<div class="palette" id="palette" role="dialog" aria-label="Bảng lệnh">
+  <div class="q"><svg class="i"><use href="#search"/></svg><input placeholder="Gõ lệnh hoặc tên project…" /><kbd>Esc</kbd></div>
+  <ul>
+    <li><svg class="i"><use href="#export"/></svg><span>Xuất video…</span><kbd>Ctrl E</kbd></li>
+    <li><svg class="i"><use href="#play"/></svg><span>Phát / dừng</span><kbd>Space</kbd></li>
+    <li><svg class="i"><use href="#flag"/></svg><span>Đặt điểm vào · điểm ra</span><kbd>I</kbd><kbd>O</kbd></li>
+    <li><svg class="i"><use href="#safe"/></svg><span>Bật khung TikTok / Reels</span><kbd>Shift S</kbd></li>
+    <li><svg class="i"><use href="#cam"/></svg><span>Chụp frame hiện tại ra PNG</span><kbd>Shift P</kbd></li>
+    <li><svg class="i"><use href="#spark"/></svg><span>Tạo phiên bản mới bằng AI</span><kbd>Ctrl Enter</kbd></li>
+    <li class="grp">Project</li>
+    <li><svg class="i"><use href="#film"/></svg><span>Mở “Launch countdown”</span></li>
+    <li><svg class="i"><use href="#film"/></svg><span>Mở “Báo cáo Q3”</span></li>
+  </ul>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const scrim = $('#scrim');
+const overlays = { exportBtn: $('#exportSheet'), cmdBtn: $('#palette'), projBtn: $('#projMenu') };
+function closeAll() { Object.values(overlays).forEach((o) => o.classList.remove('on')); scrim.classList.remove('on'); }
+function open(id) { closeAll(); overlays[id].classList.add('on'); if (id !== 'projBtn') scrim.classList.add('on'); overlays[id].querySelector('input')?.focus(); }
+Object.keys(overlays).forEach((id) => $('#' + id).addEventListener('click', (e) => { e.stopPropagation(); overlays[id].classList.contains('on') ? closeAll() : open(id); }));
+document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); open(b.dataset.open); }));
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeAll));
+scrim.addEventListener('click', closeAll);
+document.addEventListener('click', (e) => { if (!e.target.closest('#projMenu')) overlays.projBtn.classList.remove('on'); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAll();
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); open('cmdBtn'); }
+});
+
+function showPanel(id) {
+  document.querySelectorAll('.rail button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.rail === id)));
+  document.querySelectorAll('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== id));
+}
+document.querySelectorAll('[data-rail]').forEach((b) => b.addEventListener('click', () => showPanel(b.dataset.rail)));
+
+document.querySelectorAll('.seg, .pills, .aspects').forEach((g) => g.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (g.classList.contains('pills')) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+  else g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+}));
+
+function closeDd(dd, refocus) {
+  dd.querySelector('.pop').classList.remove('on');
+  const t = dd.querySelector('[aria-expanded]');
+  t.setAttribute('aria-expanded', 'false');
+  if (refocus) t.focus();
+}
+const items = (dd) => [...dd.querySelectorAll('[role="option"], [role="menuitem"]')];
+document.querySelectorAll('.dd').forEach((dd) => {
+  const trigger = dd.querySelector('[aria-expanded]');
+  const pop = dd.querySelector('.pop');
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = !pop.classList.contains('on');
+    document.querySelectorAll('.dd').forEach((d) => closeDd(d));
+    if (!opening) return;
+    pop.classList.add('on');
+    trigger.setAttribute('aria-expanded', 'true');
+    (dd.querySelector('[aria-selected="true"]') ?? items(dd)[0]).focus();
+  });
+  pop.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const it = e.target.closest('[role="option"], [role="menuitem"]');
+    if (!it) return;
+    if (it.getAttribute('role') === 'option') {
+      items(dd).forEach((o) => o.setAttribute('aria-selected', String(o === it)));
+      const val = dd.querySelector('.dd-val');
+      if (val) val.textContent = it.querySelector('span').firstChild.textContent.trim();
+      dd.dispatchEvent(new CustomEvent('pick', { detail: it.dataset.value ?? '' }));
+    }
+    closeDd(dd, true);
+  });
+  pop.addEventListener('keydown', (e) => {
+    const list = items(dd);
+    const i = list.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length].focus();
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      list[e.key === 'Home' ? 0 : list.length - 1].focus();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.stopPropagation();
+      closeDd(dd, e.key === 'Escape');
+    }
+  });
+});
+document.addEventListener('click', () => document.querySelectorAll('.dd').forEach((d) => closeDd(d)));
+
+$('#safeDd').addEventListener('pick', (e) => {
+  const social = ['tiktok', 'reels', 'shorts'].includes(e.detail);
+  $('#safe').dataset.on = e.detail === 'title' ? 'title' : '';
+  $('#social').classList.toggle('on', social);
+  $('#frame').classList.toggle('frame--tall', social);
+});
+
+$('#themeBtn').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+});
+
+const wave = $('#wave');
+for (let i = 0; i < 160; i++) { const b = document.createElement('b'); b.style.height = 3 + Math.abs(Math.sin(i * 0.37) * Math.cos(i * 0.11)) * 11 + 'px'; wave.append(b); }
+let ticks = '';
+for (let s = 0; s <= 6; s++) ticks += `<span style="left:${(s / 6) * 100}%">${s}s</span>`;
+$('#ruler').insertAdjacentHTML('beforeend', ticks);
+</script>
+</body>
+</html>

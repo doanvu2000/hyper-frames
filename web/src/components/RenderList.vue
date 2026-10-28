@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import Icon from './Icon.vue';
 import { fileUrl } from '../lib/api.js';
-import { formatBytes } from '../lib/timecode.js';
+import { formatBytes, timecode } from '../lib/timecode.js';
 import { t, tr, locale } from '../lib/i18n.js';
 
 const props = defineProps({
@@ -12,7 +12,7 @@ const props = defineProps({
 const emit = defineEmits(['cancel', 'remove']);
 
 const watching = ref(null);
-const STAGES = new Set(['queued', 'starting', 'capture', 'encode', 'assemble']);
+const STAGES = new Set(['queued', 'starting', 'capture', 'encode', 'assemble', 'trim']);
 const stageLabel = (stage) => t(`renders.stage.${STAGES.has(stage) ? stage : 'working'}`);
 const STATUS_ICON = { queued: 'loader', running: 'loader', done: 'check', failed: 'alert', cancelled: 'x' };
 
@@ -69,6 +69,7 @@ function confirmRemove(job) {
           <p class="job-meta">
             <span v-if="job.width">{{ job.width }}×{{ job.height }}</span>
             <span v-if="job.duration">{{ job.duration }}s</span>
+            <span v-if="job.range" class="job-range">{{ t('renders.range', { a: timecode(job.range.start), b: timecode(job.range.end) }) }}</span>
             <span>{{ job.fps }} fps</span>
             <span>{{ when(job.createdAt) }}</span>
             <span v-if="originLabel(job)" class="job-origin">{{ t('renders.via', { label: originLabel(job) }) }}</span>

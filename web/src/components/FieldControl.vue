@@ -1,4 +1,5 @@
 <script setup>
+import Dropdown from './Dropdown.vue';
 import { t } from '../lib/i18n.js';
 
 const props = defineProps({
@@ -18,7 +19,8 @@ function onHex(e) {
 
 <template>
   <div class="field" :class="`field--${field.type}`">
-    <label class="field-label" :for="id">{{ field.label }}</label>
+    <span v-if="field.type === 'select'" class="field-label">{{ field.label }}</span>
+    <label v-else class="field-label" :for="id">{{ field.label }}</label>
 
     <textarea
       v-if="field.type === 'textarea'"
@@ -43,9 +45,15 @@ function onHex(e) {
       />
     </div>
 
-    <select v-else-if="field.type === 'select'" :id="id" class="input" :value="value" @change="emit('update', $event.target.value)">
-      <option v-for="o in field.options" :key="o.value" :value="o.value">{{ o.label }}</option>
-    </select>
+    <Dropdown
+      v-else-if="field.type === 'select'"
+      :model-value="value"
+      :options="field.options"
+      :label="field.label"
+      trigger-class="dd-trigger dd-trigger--field"
+      panel-class="pop--wide"
+      @update:model-value="(v) => emit('update', v)"
+    />
 
     <input
       v-else-if="field.type === 'number'"
